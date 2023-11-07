@@ -13,21 +13,21 @@ public partial class User
 
     public string PasswordHash { get; set; } = null!;
 
-    public decimal? Balance { get; set; }
+    public double Balance { get; set; } = 0.00;
 
-    public int? LoginStreak { get; set; }
+    public int LoginStreak { get; set; } = 0;
 
-    public bool? TotpEnabled { get; set; }
+    public bool TotpEnabled { get; set; } = false;
 
     public string? TotpSecret { get; set; }
 
-    public bool? WebauthnEnabled { get; set; }
+    public bool WebauthnEnabled { get; set; } = false;
 
     public string? WebauthnCredentialId { get; set; }
 
     public string? WebauthnPublicKey { get; set; }
 
-    public bool? IsAdmin { get; set; }
+    public bool IsAdmin { get; set; } = false;
 
     public virtual ICollection<Giveaway> Giveaways { get; set; } = new List<Giveaway>();
 

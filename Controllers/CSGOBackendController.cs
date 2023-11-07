@@ -1,5 +1,7 @@
 using csgo.Models;
+using Fido2NetLib;
 using Microsoft.AspNetCore.Mvc;
+using OtpNet;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -46,9 +48,70 @@ namespace csgo.Controllers
 
             if (storedUser == null)
             {
-                return BadRequest("Invalid username or password.");
+                return BadRequest("InvalidCredentials");
             }
 
+            if (storedUser.TotpEnabled && storedUser.WebauthnEnabled)
+            {
+                return StatusCode(100, "PickTwoFactor");
+            }
+            else if (storedUser.TotpEnabled)
+            {
+                return StatusCode(100, "EnterTotp");
+            }
+            else if (storedUser.WebauthnEnabled)
+            {
+                return StatusCode(100, "EnterWebAuthn");
+            }
+
+            return CheckPassword(password, storedUser);
+        }
+
+        [HttpPost]
+        [Route("api/login")]
+        public ActionResult LoginUserMFA([Required] string username, [Required] string password, [Required] MFAOptions options)
+        {
+            using var context = new CsgoContext();
+            var storedUser = context.Users.FirstOrDefault(u => u.Username == username);
+
+            if (storedUser == null)
+            {
+                return BadRequest("InvalidCredentials");
+            }
+
+            switch (options.mfaType)
+            {
+                case MFAType.TOTP:
+                    {
+                        if(options.totpToken == null) return BadRequest("InvalidTotp");
+                        var totp = new Totp(Base32Encoding.ToBytes(storedUser.TotpSecret));
+                        bool verify = totp.VerifyTotp(options.totpToken, out _);
+                        if(verify)
+                        {
+                            return CheckPassword(password, storedUser);
+                        }
+                        return BadRequest("InvalidTotp");
+                    }
+                case MFAType.WebAuthn:
+                    {
+                        Fido2 _fido2 = new(new Fido2Configuration
+                        {
+                            ServerDomain = "127.0.0.1",
+                            ServerName = "CSGOBackend",
+                            Origins = { "https://127.0.0.1:7233" }
+                        });
+                        //TODO
+                        return Ok();
+                    }
+                default:
+                    {
+                        return BadRequest("InvalidCredential");
+                    }
+            }
+        }
+
+            private ActionResult CheckPassword(string password, User storedUser)
+        {
             if (BCrypt.Net.BCrypt.Verify(password, storedUser.PasswordHash))
             {
                 var claims = new List<Claim>
@@ -86,8 +149,14 @@ namespace csgo.Controllers
             }
             else
             {
-                return BadRequest("Invalid username or password.");
+                return BadRequest("InvalidCredentials");
             }
         }
+    }
+
+    public enum MFAType
+    {
+        TOTP = 1,
+        WebAuthn = 2
     }
 }
