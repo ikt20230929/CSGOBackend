@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Mvc;
 using OtpNet;
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
 using System.Security.Claims;
+using static csgo.Dtos;
 
 namespace csgo.Controllers
 {
@@ -13,25 +15,26 @@ namespace csgo.Controllers
     {
         [HttpPost]
         [Route("api/register")]
-        public ActionResult Register([Required] string username, [Required] string email, [Required] string password)
+        public ActionResult Register(Register register)
         {
-            User newUser = new() {
-                Email = email,
-                Username = username
+            User newUser = new()
+            {
+                Email = register.Email,
+                Username = register.Username
             };
             using var context = new CsgoContext();
 
-            if (context.Users.Any(u => u.Username == username))
+            if (context.Users.Any(u => u.Username == register.Username))
             {
                 return BadRequest("Username is already in use.");
             }
 
-            if (context.Users.Any(u => u.Email == email))
+            if (context.Users.Any(u => u.Email == register.Email))
             {
                 return BadRequest("Email is already in use.");
             }
 
-            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(password);
+            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(register.Password);
             newUser.PasswordHash = hashedPassword;
             context.Users.Add(newUser);
             context.SaveChanges();
@@ -41,37 +44,56 @@ namespace csgo.Controllers
 
         [HttpPost]
         [Route("api/login")]
-        public ActionResult LoginUser([Required] string username, [Required] string password)
+        public ActionResult LoginUser(Login login)
         {
             using var context = new CsgoContext();
-            var storedUser = context.Users.FirstOrDefault(u => u.Username == username);
+            var storedUser = context.Users.FirstOrDefault(u => u.Username == login.Username);
 
             if (storedUser == null)
             {
                 return BadRequest("InvalidCredentials");
             }
 
+            string twoFactorScenario = null!;
+
             if (storedUser.TotpEnabled && storedUser.WebauthnEnabled)
             {
-                return StatusCode(100, "PickTwoFactor");
+                twoFactorScenario = "PickTwoFactor";
             }
             else if (storedUser.TotpEnabled)
             {
-                return StatusCode(100, "EnterTotp");
+                twoFactorScenario = "EnterTotp";
             }
             else if (storedUser.WebauthnEnabled)
             {
-                return StatusCode(100, "EnterWebAuthn");
+                twoFactorScenario = "EnterWebAuthn";
             }
 
-            return CheckPassword(password, storedUser);
+            if (twoFactorScenario != null)
+            {
+                // If we have to confirm 2FA, store their username and password in memory temporarily, this will be deleted once the 2FA check is done
+                HttpContext.Session.SetString("_preLoginUser", login.Username);
+                HttpContext.Session.SetString("_preLoginPass", login.Password);
+                return StatusCode(401, twoFactorScenario);
+            }
+
+            return CheckPassword(login.Username, storedUser);
         }
 
         [HttpPost]
-        [Route("api/login")]
-        public ActionResult LoginUserMFA([Required] string username, [Required] string password, [Required] MFAOptions options)
+        [Route("api/checkMFA")]
+        public ActionResult LoginUserMFA([Required] MFAOptions options)
         {
+            var username = HttpContext.Session.GetString("_preLoginUser");
+            var password = HttpContext.Session.GetString("_preLoginPass");
+
+            if (username == null || password == null)
+            {
+                return Unauthorized();
+            }
+
             using var context = new CsgoContext();
+
             var storedUser = context.Users.FirstOrDefault(u => u.Username == username);
 
             if (storedUser == null)
@@ -83,10 +105,10 @@ namespace csgo.Controllers
             {
                 case MFAType.TOTP:
                     {
-                        if(options.totpToken == null) return BadRequest("InvalidTotp");
+                        if (options.totpToken == null) return BadRequest("InvalidTotp");
                         var totp = new Totp(Base32Encoding.ToBytes(storedUser.TotpSecret));
                         bool verify = totp.VerifyTotp(options.totpToken, out _);
-                        if(verify)
+                        if (verify)
                         {
                             return CheckPassword(password, storedUser);
                         }
@@ -110,7 +132,7 @@ namespace csgo.Controllers
             }
         }
 
-            private ActionResult CheckPassword(string password, User storedUser)
+        private ActionResult CheckPassword(string password, User storedUser)
         {
             if (BCrypt.Net.BCrypt.Verify(password, storedUser.PasswordHash))
             {

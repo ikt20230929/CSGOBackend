@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using System.Text;
 
 namespace csgo
 {
@@ -9,8 +8,6 @@ namespace csgo
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
-
-            builder.Services.AddAntiforgery(options => options.HeaderName = "X-XSRF-TOKEN");
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
@@ -24,15 +21,34 @@ namespace csgo
                     IssuerSigningKey = Signing.AccessTokenKey
                 };
             });
+            builder.Services.AddDistributedMemoryCache();
+            builder.Services.AddSession(options =>
+            {
+                options.IdleTimeout = TimeSpan.FromMinutes(30);
+                options.Cookie.HttpOnly = true;
+                options.Cookie.IsEssential = true;
+            });
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("API", policy =>
+                {
+                    policy.WithOrigins("http://localhost:3000");
+                    policy.WithHeaders("content-type");
+                });
+            });
+
             builder.Services.AddSwaggerGen();
-            builder.Services.AddControllers();
+            builder.Services.AddControllersWithViews();
 
             var app = builder.Build();
             app.UseHttpsRedirection();
             app.UseAuthentication();
+            app.UseCors("API");
             app.UseSwagger();
             app.UseSwaggerUI();
             app.MapControllers();
+            app.UseSession();
             app.Run();
         }
     }
