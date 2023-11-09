@@ -34,7 +34,7 @@ namespace csgo
                 options.AddPolicy("API", policy =>
                 {
                     policy.WithOrigins("http://localhost:3000");
-                    policy.WithHeaders("content-type");
+                    policy.WithHeaders("content-type", "authorization");
                 });
             });
 
@@ -44,6 +44,7 @@ namespace csgo
             var app = builder.Build();
             app.UseHttpsRedirection();
             app.UseAuthentication();
+            app.UseAuthorization();
             app.UseCors("API");
             app.UseSwagger();
             app.UseSwaggerUI();

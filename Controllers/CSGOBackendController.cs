@@ -1,11 +1,9 @@
 using csgo.Models;
 using Fido2NetLib;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using OtpNet;
-using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
-using System.Net;
 using System.Security.Claims;
 using static csgo.Dtos;
 
@@ -41,6 +39,24 @@ namespace csgo.Controllers
             context.SaveChanges();
 
             return Ok("Registration successful.");
+        }
+
+        [HttpGet]
+        [Route("api/profile")]
+        [Authorize]
+        public ActionResult Profile()
+        {
+            using var context = new CsgoContext();
+            var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
+
+            User user = context.Users.First(x => x.Username == jwtToken!.Claims.First(claim => claim.Type == "Name").Value);
+
+            return Ok(new { 
+                username = user.Username,
+                balance = user.Balance
+            });
         }
 
         [HttpPost]
