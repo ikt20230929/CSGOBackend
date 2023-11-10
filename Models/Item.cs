@@ -11,7 +11,7 @@ public partial class Item
 
     public string? ItemDescription { get; set; }
 
-    public int? Rarity { get; set; }
+    public int Rarity { get; set; }
 
     public int? SkinId { get; set; }
 

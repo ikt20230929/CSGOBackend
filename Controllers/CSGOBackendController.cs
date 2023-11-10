@@ -51,12 +51,28 @@ namespace csgo.Controllers
             var tokenHandler = new JwtSecurityTokenHandler();
             var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
 
-            User user = context.Users.First(x => x.Username == jwtToken!.Claims.First(claim => claim.Type == "Name").Value);
+            User user = context.Users.First(x => x.Username == HttpContext.User.FindFirstValue(ClaimTypes.Name));
 
             return Ok(new { 
                 username = user.Username,
                 balance = user.Balance
             });
+        }
+
+        [HttpGet]
+        [Route("api/inventory")]
+        [Authorize]
+        public ActionResult Inventory()
+        {
+            using var context = new CsgoContext();
+            var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
+
+            User user = context.Users.First(x => x.Username == HttpContext.User.FindFirstValue(ClaimTypes.Name));
+            List<Item> items = context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item).ToList()!;
+
+            return Ok(items);
         }
 
         [HttpPost]
@@ -125,6 +141,22 @@ namespace csgo.Controllers
             {
                 return CheckPassword(login.Password, storedUser);
             }
+        }
+
+        [HttpGet]
+        [Route("api/admin/items/add")]
+        [Authorize]
+        public ActionResult AddItem(AddItemDTO item)
+        {
+            using var context = new CsgoContext();
+            var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
+
+            User user = context.Users.First(x => x.Username == HttpContext.User.FindFirstValue(ClaimTypes.Name));
+            List<Item> items = context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item).ToList()!;
+
+            return Ok(items);
         }
 
         private ActionResult CheckPassword(string password, User storedUser)

@@ -217,9 +217,6 @@ public partial class CsgoContext : DbContext
 
             entity.HasIndex(e => e.UserId, "user_id");
 
-            entity.Property(e => e.InventoryId)
-                .HasColumnType("int(11)")
-                .HasColumnName("inventory_id");
             entity.Property(e => e.ItemId)
                 .HasColumnType("int(11)")
                 .HasColumnName("item_id");

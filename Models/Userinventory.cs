@@ -6,7 +6,6 @@ namespace csgo.Models;
 public partial class Userinventory
 {
     public int InventoryId { get; set; }
-
     public int? UserId { get; set; }
 
     public int? ItemId { get; set; }

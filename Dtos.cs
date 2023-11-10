@@ -6,5 +6,7 @@ namespace csgo
     {
         public record Login([Required] string Username, [Required] string Password, MFAOptions? MFA);
         public record Register([Required] string Username, [Required] string Email, [Required] string Password);
+        public record AddItem([Required] string Name, [Required] int Rarity, [Required] string Password);
+
     }
 }
