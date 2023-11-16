@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿namespace csgo.Models;
 
-namespace csgo.Models;
-
-public partial class Item
+public class Item
 {
     public int ItemId { get; set; }
 

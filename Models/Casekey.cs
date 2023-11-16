@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿namespace csgo.Models;
 
-namespace csgo.Models;
-
-public partial class Casekey
+public class Casekey
 {
     public int? CaseId { get; set; }
 

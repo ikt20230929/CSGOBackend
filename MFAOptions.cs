@@ -1,13 +1,13 @@
 ﻿namespace csgo
 {
-    public enum MFAType
+    public enum MfaType
     {
-        TOTP = 1,
+        Totp = 1,
         WebAuthn = 2
     }
-    public class MFAOptions
+    public class MfaOptions
     {
-        public string? totpToken;
-        public MFAType mfaType;
+        public string? TotpToken;
+        public MfaType MfaType;
     }
 }

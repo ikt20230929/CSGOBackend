@@ -1,9 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿namespace csgo.Models;
 
-namespace csgo.Models;
-
-public partial class Userinventory
+public class Userinventory
 {
     public int InventoryId { get; set; }
     public int? UserId { get; set; }

@@ -1,19 +1,20 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using csgo.Models;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OtpNet;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using static csgo.Dtos;
 
 namespace csgo.Controllers
 {
     [ApiController]
-    public class CSGOBackendController : ControllerBase
+    [Route("api")]
+    public class CsgoBackendController : ControllerBase
     {
         [HttpPost]
-        [Route("api/register")]
+        [Route("register")]
         public ActionResult Register(Register register)
         {
             User newUser = new()
@@ -42,16 +43,11 @@ namespace csgo.Controllers
         }
 
         [HttpGet]
-        [Route("api/profile")]
+        [Route("profile")]
         [Authorize]
         public ActionResult Profile()
         {
-            using var context = new CsgoContext();
-            var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
-
-            User user = context.Users.First(x => x.Username == HttpContext.User.FindFirstValue(ClaimTypes.Name));
+            User user = GetUserFromJwt();
 
             return Ok(new { 
                 username = user.Username,
@@ -59,24 +55,31 @@ namespace csgo.Controllers
             });
         }
 
-        [HttpGet]
-        [Route("api/inventory")]
-        [Authorize]
-        public ActionResult Inventory()
+        private User GetUserFromJwt()
         {
             using var context = new CsgoContext();
             var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
             var tokenHandler = new JwtSecurityTokenHandler();
             var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
+            jwtToken!.Payload.TryGetValue("name", out var username);
 
-            User user = context.Users.First(x => x.Username == HttpContext.User.FindFirstValue(ClaimTypes.Name));
+            return context.Users.First(x => x.Username == (string)username!);
+        }
+
+        [HttpGet]
+        [Route("inventory")]
+        [Authorize]
+        public ActionResult Inventory()
+        {
+            User user = GetUserFromJwt();
+            using var context = new CsgoContext();
             List<Item> items = context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item).ToList()!;
 
             return Ok(items);
         }
 
         [HttpPost]
-        [Route("api/login")]
+        [Route("login")]
         public ActionResult LoginUser(Login login)
         {
             using var context = new CsgoContext();
@@ -89,7 +92,7 @@ namespace csgo.Controllers
 
             string twoFactorScenario = null!;
 
-            if (storedUser.TotpEnabled && storedUser.WebauthnEnabled)
+            if (storedUser is { TotpEnabled: true, WebauthnEnabled: true })
             {
                 twoFactorScenario = "PickTwoFactor";
             }
@@ -102,58 +105,53 @@ namespace csgo.Controllers
                 twoFactorScenario = "EnterWebAuthn";
             }
 
-            if (twoFactorScenario != null)
+            if (login.Mfa == null) return Unauthorized(twoFactorScenario);
+            switch (login.Mfa.MfaType)
             {
-                if (login.MFA == null) return Unauthorized(twoFactorScenario);
-                switch (login.MFA.mfaType)
+                case MfaType.Totp:
                 {
-                    case MFAType.TOTP:
-                        {
-                            if (!storedUser.TotpEnabled) return BadRequest("InvalidMFAMethod");
-                            if (login.MFA.totpToken == null) return BadRequest("InvalidTotp");
-                            var totp = new Totp(Base32Encoding.ToBytes(storedUser.TotpSecret));
-                            bool verify = totp.VerifyTotp(login.MFA.totpToken, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
-                            if (verify)
-                            {
-                                return CheckPassword(login.Password, storedUser);
-                            }
-                            return BadRequest("InvalidTotp");
-                        }
-                    case MFAType.WebAuthn:
-                        {
-                            if (!storedUser.WebauthnEnabled) return BadRequest("InvalidMFAMethod");
-                            Fido2 _fido2 = new(new Fido2Configuration
-                            {
-                                ServerDomain = "127.0.0.1",
-                                ServerName = "CSGOBackend",
-                                Origins = { "https://127.0.0.1:7233" }
-                            });
-                            //TODO
-                            return Ok();
-                        }
-                    default:
-                        {
-                            return BadRequest("InvalidCredential");
-                        }
+                    if (!storedUser.TotpEnabled) return BadRequest("InvalidMFAMethod");
+                    if (login.Mfa.TotpToken == null) return BadRequest("InvalidTotp");
+                    var totp = new Totp(Base32Encoding.ToBytes(storedUser.TotpSecret));
+                    bool verify = totp.VerifyTotp(login.Mfa.TotpToken, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
+                    return verify ? CheckPassword(login.Password, storedUser) : BadRequest("InvalidTotp");
                 }
-            }
-            else
-            {
-                return CheckPassword(login.Password, storedUser);
+                case MfaType.WebAuthn:
+                {
+                    if (!storedUser.WebauthnEnabled) return BadRequest("InvalidMFAMethod");
+                    Fido2 fido2 = new(new Fido2Configuration
+                    {
+                        ServerDomain = "127.0.0.1",
+                        ServerName = "CSGOBackend",
+                        Origins = { "https://127.0.0.1:7233" }
+                    });
+                    //TODO
+                    return Ok();
+                }
+                default:
+                {
+                    return BadRequest("InvalidCredential");
+                }
             }
         }
 
         [HttpGet]
-        [Route("api/admin/items/add")]
+        [Route("admin/check")]
         [Authorize]
-        public ActionResult AddItem(AddItemDTO item)
+        public ActionResult IsAdmin()
         {
-            using var context = new CsgoContext();
-            var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
+            User user = GetUserFromJwt();
+            return user.IsAdmin ? NoContent() : Forbid();
+        }
 
-            User user = context.Users.First(x => x.Username == HttpContext.User.FindFirstValue(ClaimTypes.Name));
+        [HttpGet]
+        [Route("admin/items/add")]
+        [Authorize]
+        public ActionResult AddItem(AddItem item)
+        {
+            User user = GetUserFromJwt();
+            using var context = new CsgoContext();
+
             List<Item> items = context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item).ToList()!;
 
             return Ok(items);
@@ -161,45 +159,41 @@ namespace csgo.Controllers
 
         private ActionResult CheckPassword(string password, User storedUser)
         {
-            if (BCrypt.Net.BCrypt.Verify(password, storedUser.PasswordHash))
+            if (!BCrypt.Net.BCrypt.Verify(password, storedUser.PasswordHash)) return BadRequest("InvalidCredentials");
+            var claims = new List<Claim>
             {
-                var claims = new List<Claim>
-                    {
-                        new Claim(ClaimTypes.Name, storedUser.Username),
-                        new Claim(ClaimTypes.Email, storedUser.Email)
-                    };
+                new("name", storedUser.Username),
+                new("email", storedUser.Email),
+                new("role", storedUser.IsAdmin ? "admin" : "user")
+            };
 
-                // Create session token
-                var accessToken = new JwtSecurityToken(
-                    issuer: "https://localhost:7233",
-                    audience: "https://localhost:7233",
-                    claims: claims,
-                    expires: DateTime.Now.AddMinutes(30),
-                    signingCredentials: Signing.AccessTokenCreds);
-                var accessTokenString = new JwtSecurityTokenHandler().WriteToken(accessToken);
+            // Create session token
+            var accessToken = new JwtSecurityToken(
+                issuer: "https://localhost:7233",
+                audience: "https://localhost:7233",
+                claims: claims,
+                expires: DateTime.Now.AddMinutes(30),
+                signingCredentials: Signing.AccessTokenCreds);
+            var accessTokenString = new JwtSecurityTokenHandler().WriteToken(accessToken);
 
-                // Create refresh token
-                var refreshToken = new JwtSecurityToken(
-                    issuer: "https://localhost:7233",
-                    audience: "https://localhost:7233",
-                    claims: claims,
-                    expires: DateTime.Now.AddDays(7),
-                    signingCredentials: Signing.refreshTokenCreds);
-                var refreshTokenString = new JwtSecurityTokenHandler().WriteToken(refreshToken);
+            // Create refresh token
+            var refreshToken = new JwtSecurityToken(
+                issuer: "https://localhost:7233",
+                audience: "https://localhost:7233",
+                claims: claims,
+                expires: DateTime.Now.AddDays(7),
+                signingCredentials: Signing.RefreshTokenCreds);
+            var refreshTokenString = new JwtSecurityTokenHandler().WriteToken(refreshToken);
 
-                Response.Cookies.Append("refreshToken", refreshTokenString, new CookieOptions
-                {
-                    HttpOnly = true,
-                    SameSite = SameSiteMode.None,
-                    MaxAge = TimeSpan.FromDays(7),
-                    Secure = true
-                });
-                return Ok(new { AccessToken = accessTokenString });
-            }
-            else
+            Response.Cookies.Append("refreshToken", refreshTokenString, new CookieOptions
             {
-                return BadRequest("InvalidCredentials");
-            }
+                HttpOnly = true,
+                SameSite = SameSiteMode.None,
+                MaxAge = TimeSpan.FromDays(7),
+                Secure = true
+            });
+            return Ok(new { AccessToken = accessTokenString });
+
         }
     }
 }

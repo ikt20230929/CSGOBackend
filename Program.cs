@@ -1,3 +1,4 @@
+using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 
@@ -7,6 +8,8 @@ namespace csgo
     {
         public static void Main(string[] args)
         {
+            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
+            JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
             {
@@ -18,7 +21,9 @@ namespace csgo
                     ValidateIssuerSigningKey = true,
                     ValidIssuer = "https://localhost:7233",
                     ValidAudience = "https://localhost:7233",
-                    IssuerSigningKey = Signing.AccessTokenKey
+                    IssuerSigningKey = Signing.AccessTokenKey,
+                    RoleClaimType = "role",
+                    NameClaimType = "name"
                 };
             });
             builder.Services.AddDistributedMemoryCache();
