@@ -13,9 +13,6 @@ public class Item
     public int? SkinId { get; set; }
 
     public decimal? ItemValue { get; set; }
-
-    public string? ItemImageUrl { get; set; }
-
     public virtual ICollection<Giveaway> Giveaways { get; set; } = new List<Giveaway>();
 
     public virtual Skin? Skin { get; set; }

@@ -122,9 +122,6 @@ public partial class CsgoContext : DbContext
             entity.Property(e => e.ItemDescription)
                 .HasColumnType("text")
                 .HasColumnName("item_description");
-            entity.Property(e => e.ItemImageUrl)
-                .HasMaxLength(255)
-                .HasColumnName("item_image_url");
             entity.Property(e => e.ItemName)
                 .HasMaxLength(255)
                 .HasColumnName("item_name");

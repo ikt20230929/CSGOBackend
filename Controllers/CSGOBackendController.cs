@@ -9,6 +9,7 @@ using static csgo.Dtos;
 
 namespace csgo.Controllers
 {
+
     [ApiController]
     [Route("api")]
     public class CsgoBackendController : ControllerBase
@@ -90,7 +91,7 @@ namespace csgo.Controllers
                 return BadRequest("InvalidCredentials");
             }
 
-            string twoFactorScenario = null!;
+            string? twoFactorScenario = null;
 
             if (storedUser is { TotpEnabled: true, WebauthnEnabled: true })
             {
@@ -105,6 +106,7 @@ namespace csgo.Controllers
                 twoFactorScenario = "EnterWebAuthn";
             }
 
+            if (twoFactorScenario == null) return CheckPassword(login.Password, storedUser);
             if (login.Mfa == null) return Unauthorized(twoFactorScenario);
             switch (login.Mfa.MfaType)
             {
@@ -113,12 +115,14 @@ namespace csgo.Controllers
                     if (!storedUser.TotpEnabled) return BadRequest("InvalidMFAMethod");
                     if (login.Mfa.TotpToken == null) return BadRequest("InvalidTotp");
                     var totp = new Totp(Base32Encoding.ToBytes(storedUser.TotpSecret));
-                    bool verify = totp.VerifyTotp(login.Mfa.TotpToken, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
+                    bool verify = totp.VerifyTotp(login.Mfa.TotpToken, out _,
+                        VerificationWindow.RfcSpecifiedNetworkDelay);
                     return verify ? CheckPassword(login.Password, storedUser) : BadRequest("InvalidTotp");
                 }
                 case MfaType.WebAuthn:
                 {
                     if (!storedUser.WebauthnEnabled) return BadRequest("InvalidMFAMethod");
+                    // ReSharper disable once UnusedVariable
                     Fido2 fido2 = new(new Fido2Configuration
                     {
                         ServerDomain = "127.0.0.1",
@@ -145,16 +149,68 @@ namespace csgo.Controllers
         }
 
         [HttpGet]
-        [Route("admin/items/add")]
+        [Route("admin/items")]
         [Authorize]
-        public ActionResult AddItem(AddItem item)
+        public ActionResult GetItems()
         {
             User user = GetUserFromJwt();
+            if (!user.IsAdmin) return Forbid();
+            using var context = new CsgoContext();
+            return Ok(context.Items.ToList());
+        }
+
+        [HttpPost]
+        [Route("admin/items")]
+        [Authorize]
+        public ActionResult AddItem(AddItem details)
+        {
+            User user = GetUserFromJwt();
+            if (!user.IsAdmin) return Forbid();
             using var context = new CsgoContext();
 
-            List<Item> items = context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item).ToList()!;
+            Item item = new()
+            {
+                ItemName = details.Name,
+                ItemDescription = details.Description,
+                ItemValue = details.Value,
+                Rarity = details.Rarity,
+                SkinId = details.Skin
+            };
+            context.Items.Add(item);
+            context.SaveChanges();
 
-            return Ok(items);
+            return Ok(item);
+        }
+
+        [HttpGet]
+        [Route("admin/skins")]
+        [Authorize]
+        public ActionResult GetSkins()
+        {
+            User user = GetUserFromJwt();
+            if (!user.IsAdmin) return Forbid();
+            using var context = new CsgoContext();
+            return Ok(context.Skins.ToList());
+        }
+
+        [HttpPost]
+        [Route("admin/skins")]
+        [Authorize]
+        public ActionResult AdSkin(AddSkin details)
+        {
+            User user = GetUserFromJwt();
+            if (!user.IsAdmin) return Forbid();
+            using var context = new CsgoContext();
+
+            Skin skin = new()
+            {
+                SkinName = details.Name,
+                SkinValue = details.Value
+            };
+            context.Skins.Add(skin);
+            context.SaveChanges();
+
+            return Ok(skin);
         }
 
         private ActionResult CheckPassword(string password, User storedUser)
