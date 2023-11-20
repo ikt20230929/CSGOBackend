@@ -10,9 +10,9 @@ public class Item
 
     public int Rarity { get; set; }
 
-    public int? SkinId { get; set; }
+    public int SkinId { get; set; }
 
-    public decimal? ItemValue { get; set; }
+    public decimal ItemValue { get; set; }
     public virtual ICollection<Giveaway> Giveaways { get; set; } = new List<Giveaway>();
 
     public virtual Skin? Skin { get; set; }

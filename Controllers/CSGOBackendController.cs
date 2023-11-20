@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OtpNet;
 using static csgo.Dtos;
+using Item = csgo.Models.Item;
+using Skin = csgo.Models.Skin;
 
 namespace csgo.Controllers
 {
@@ -156,13 +158,13 @@ namespace csgo.Controllers
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();
             using var context = new CsgoContext();
-            return Ok(context.Items.ToList());
+            return Ok(context.Items.Select(item => item.ToDto()).ToList());
         }
 
         [HttpPost]
         [Route("admin/items")]
         [Authorize]
-        public ActionResult AddItem(AddItem details)
+        public ActionResult AddItem(Dtos.Item details)
         {
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();
@@ -190,13 +192,13 @@ namespace csgo.Controllers
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();
             using var context = new CsgoContext();
-            return Ok(context.Skins.ToList());
+            return Ok(context.Skins.Select(skin => skin.ToDto()).ToList());
         }
 
         [HttpPost]
         [Route("admin/skins")]
         [Authorize]
-        public ActionResult AdSkin(AddSkin details)
+        public ActionResult AdSkin(Dtos.Skin details)
         {
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();

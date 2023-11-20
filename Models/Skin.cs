@@ -6,7 +6,7 @@ public class Skin
 
     public string SkinName { get; set; } = null!;
 
-    public decimal? SkinValue { get; set; }
+    public decimal SkinValue { get; set; }
 
     public virtual ICollection<Item> Items { get; set; } = new List<Item>();
 }
