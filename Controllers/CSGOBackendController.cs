@@ -176,7 +176,7 @@ namespace csgo.Controllers
                 ItemDescription = details.Description,
                 ItemValue = details.Value,
                 Rarity = details.Rarity,
-                SkinId = details.Skin
+                SkinId = details.SkinId
             };
             context.Items.Add(item);
             context.SaveChanges();

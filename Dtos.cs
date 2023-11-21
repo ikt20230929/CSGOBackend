@@ -11,7 +11,7 @@ namespace csgo
         public record Register([Required] string Username, [Required] string Email, [Required] string Password);
 
         public record Item([Required] string Name, [Required] string Description, [Required] int Rarity,
-            [Required] int Skin, [Required] decimal Value);
+            [Required] int SkinId, [Required] decimal Value);
 
         public record Skin([Required] string Name, [Required] decimal Value);
 
