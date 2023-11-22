@@ -13,5 +13,10 @@ namespace csgo
         {
             return new Dtos.ItemResponse(item.ItemId, item.ItemName, item.ItemDescription!, item.Rarity, item.SkinId, item.ItemValue);
         }
+
+        public static Dtos.CaseResponse ToDto(this Case @case)
+        {
+            return new Dtos.CaseResponse(@case.CaseId, @case.CaseName, @case.Items.ToList());
+        }
     }
 }

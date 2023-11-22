@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OtpNet;
 using static csgo.Dtos;
+using Case = csgo.Models.Case;
 using Item = csgo.Models.Item;
 using Skin = csgo.Models.Skin;
 
@@ -198,7 +199,7 @@ namespace csgo.Controllers
         [HttpPost]
         [Route("admin/skins")]
         [Authorize]
-        public ActionResult AdSkin(Dtos.Skin details)
+        public ActionResult AddSkin(Dtos.Skin details)
         {
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();
@@ -213,6 +214,51 @@ namespace csgo.Controllers
             context.SaveChanges();
 
             return Ok(skin);
+        }
+
+        [HttpGet]
+        [Route("cases")]
+        [Authorize]
+        public ActionResult GetCases()
+        {
+            using var context = new CsgoContext();
+            return Ok(context.Cases.Select(@case => @case.ToDto()).ToList());
+        }
+
+        [HttpPost]
+        [Route("admin/cases")]
+        [Authorize]
+        public ActionResult AddCase(Dtos.Case details)
+        {
+            User user = GetUserFromJwt();
+            if (!user.IsAdmin) return Forbid();
+            using var context = new CsgoContext();
+
+            Case @case = new()
+            {
+                CaseName = details.Name
+            };
+            context.Cases.Add(@case);
+            context.SaveChanges();
+
+            return Ok(@case);
+        }
+
+        [HttpPost]
+        [Route("admin/cases/items")]
+        [Authorize]
+        public ActionResult AddCaseItem(CaseItem details)
+        {
+            User user = GetUserFromJwt();
+            if (!user.IsAdmin) return Forbid();
+            using var context = new CsgoContext();
+
+            var @case = context.Cases.Find(details.CaseId);
+            var item = context.Items.Find(details.ItemId);
+            @case?.Items.Add(item!);
+            context.SaveChanges();
+
+            return Ok(@case);
         }
 
         private ActionResult CheckPassword(string password, User storedUser)

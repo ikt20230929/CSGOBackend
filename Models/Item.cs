@@ -18,4 +18,6 @@ public class Item
     public virtual Skin? Skin { get; set; }
 
     public virtual ICollection<Userinventory> Userinventories { get; set; } = new List<Userinventory>();
+
+    public virtual ICollection<Case> Cases { get; set; } = new List<Case>();
 }

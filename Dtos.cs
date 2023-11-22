@@ -15,6 +15,8 @@ namespace csgo
 
         public record Skin([Required] string Name, [Required] decimal Value);
 
+        public record Case([Required] string Name);
+
         public record ItemResponse(
             [Required] [property: JsonProperty("itemId")] int Id,
             [Required] [property: JsonProperty("itemName")] string Name,
@@ -29,5 +31,11 @@ namespace csgo
             [Required] [property: JsonProperty("skinName")] string Name,
             [Required] [property: JsonProperty("skinValue")] decimal Value
         );
+
+        public record CaseResponse(
+            [Required] [property: JsonProperty("caseId")] int Id,
+            [Required] [property: JsonProperty("caseName")] string Name,
+            [Required] [property: JsonProperty("items")] List<Models.Item> Items);
+        public record CaseItem([Required] int CaseId, [Required] int ItemId);
     }
 }

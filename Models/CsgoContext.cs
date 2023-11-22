@@ -49,6 +49,32 @@ public partial class CsgoContext : DbContext
             entity.Property(e => e.CaseName)
                 .HasMaxLength(255)
                 .HasColumnName("case_name");
+
+            entity.HasMany(d => d.Items).WithMany(p => p.Cases)
+                .UsingEntity<Dictionary<string, object>>(
+                    "CaseItem",
+                    r => r.HasOne<Item>().WithMany()
+                        .HasForeignKey("ItemId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("case_items_ibfk_2"),
+                    l => l.HasOne<Case>().WithMany()
+                        .HasForeignKey("CaseId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("case_items_ibfk_1"),
+                    j =>
+                    {
+                        j.HasKey("CaseId", "ItemId")
+                            .HasName("PRIMARY")
+                            .HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0 });
+                        j.ToTable("case_items");
+                        j.HasIndex(new[] { "ItemId" }, "item_id");
+                        j.IndexerProperty<int>("CaseId")
+                            .HasColumnType("int(11)")
+                            .HasColumnName("case_id");
+                        j.IndexerProperty<int>("ItemId")
+                            .HasColumnType("int(11)")
+                            .HasColumnName("item_id");
+                    });
         });
 
         modelBuilder.Entity<Casekey>(entity =>
@@ -212,6 +238,10 @@ public partial class CsgoContext : DbContext
 
             entity.HasIndex(e => e.UserId, "user_id");
 
+            entity.Property(e => e.InventoryId)
+                .ValueGeneratedNever()
+                .HasColumnType("int(11)")
+                .HasColumnName("inventory_id");
             entity.Property(e => e.ItemId)
                 .HasColumnType("int(11)")
                 .HasColumnName("item_id");
