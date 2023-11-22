@@ -261,6 +261,23 @@ namespace csgo.Controllers
             return Ok(@case);
         }
 
+        [HttpPost]
+        [Route("admin/cases/items/delete")]
+        [Authorize]
+        public ActionResult DeleteCaseItem(CaseItem details)
+        {
+            User user = GetUserFromJwt();
+            if (!user.IsAdmin) return Forbid();
+            using var context = new CsgoContext();
+
+            var @case = context.Cases.Find(details.CaseId);
+            var item = context.Items.Find(details.ItemId);
+            @case?.Items.Remove(item!);
+            context.SaveChanges();
+
+            return Ok(@case);
+        }
+
         private ActionResult CheckPassword(string password, User storedUser)
         {
             if (!BCrypt.Net.BCrypt.Verify(password, storedUser.PasswordHash)) return BadRequest("InvalidCredentials");

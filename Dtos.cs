@@ -1,5 +1,4 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using csgo.Models;
 using Newtonsoft.Json;
 
 namespace csgo
