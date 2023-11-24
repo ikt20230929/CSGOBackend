@@ -1,7 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json.Serialization;
 
 namespace csgo
 {
@@ -41,6 +40,7 @@ namespace csgo
                 {
                     policy.WithOrigins("http://localhost:3000");
                     policy.WithHeaders("content-type", "authorization");
+                    policy.AllowCredentials();
                 });
             });
 
@@ -48,10 +48,10 @@ namespace csgo
             builder.Services.AddControllersWithViews().AddNewtonsoftJson();
 
             var app = builder.Build();
+            app.UseCors("API");
             app.UseHttpsRedirection();
             app.UseAuthentication();
             app.UseAuthorization();
-            app.UseCors("API");
             app.UseSwagger();
             app.UseSwaggerUI();
             app.MapControllers();

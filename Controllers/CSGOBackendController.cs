@@ -70,6 +70,16 @@ namespace csgo.Controllers
             return context.Users.First(x => x.Username == (string)username!);
         }
 
+        private User GetUserFromRefreshJwt()
+        {
+            using var context = new CsgoContext();
+            var token = HttpContext.Request.Cookies["refreshToken"]!;
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
+            jwtToken!.Payload.TryGetValue("name", out var username);
+            return context.Users.First(x => x.Username == (string)username!);
+        }
+
         [HttpGet]
         [Route("inventory")]
         [Authorize]
@@ -80,6 +90,24 @@ namespace csgo.Controllers
             List<Item> items = context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item).ToList()!;
 
             return Ok(items);
+        }
+
+        [HttpGet]
+        [Route("refresh-token")]
+        public ActionResult RefreshToken()
+        {
+            User user = GetUserFromRefreshJwt();
+            var (accessToken, refreshToken) = GenerateTokens(user);
+
+            Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
+            {
+                HttpOnly = true,
+                SameSite = SameSiteMode.None,
+                MaxAge = TimeSpan.FromDays(7),
+                Secure = true
+            });
+
+            return Ok(new { AccessToken = accessToken });
         }
 
         [HttpPost]
@@ -278,14 +306,13 @@ namespace csgo.Controllers
             return Ok(@case);
         }
 
-        private ActionResult CheckPassword(string password, User storedUser)
+        private (string accessToken, string refreshToken) GenerateTokens(User user)
         {
-            if (!BCrypt.Net.BCrypt.Verify(password, storedUser.PasswordHash)) return BadRequest("InvalidCredentials");
             var claims = new List<Claim>
             {
-                new("name", storedUser.Username),
-                new("email", storedUser.Email),
-                new("role", storedUser.IsAdmin ? "admin" : "user")
+                new("name", user.Username),
+                new("email", user.Email),
+                new("role", user.IsAdmin ? "admin" : "user")
             };
 
             // Create session token
@@ -306,14 +333,21 @@ namespace csgo.Controllers
                 signingCredentials: Signing.RefreshTokenCreds);
             var refreshTokenString = new JwtSecurityTokenHandler().WriteToken(refreshToken);
 
-            Response.Cookies.Append("refreshToken", refreshTokenString, new CookieOptions
+            return (accessTokenString, refreshTokenString);
+        }
+
+        private ActionResult CheckPassword(string password, User storedUser)
+        {
+            if (!BCrypt.Net.BCrypt.Verify(password, storedUser.PasswordHash)) return BadRequest("InvalidCredentials");
+            var (accessToken, refreshToken) = GenerateTokens(storedUser);
+            Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
             {
                 HttpOnly = true,
                 SameSite = SameSiteMode.None,
                 MaxAge = TimeSpan.FromDays(7),
                 Secure = true
             });
-            return Ok(new { AccessToken = accessTokenString });
+            return Ok(new { AccessToken = accessToken });
 
         }
     }
