@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.IdentityModel.Tokens;
 
 namespace csgo
@@ -11,6 +12,7 @@ namespace csgo
             JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
             JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
             var builder = WebApplication.CreateBuilder(args);
+            Globals.Config = builder.Configuration.GetSection("Settings").Get<Config>();
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
@@ -19,8 +21,8 @@ namespace csgo
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = "https://localhost:7233",
-                    ValidAudience = "https://localhost:7233",
+                    ValidIssuer = Globals.Config.BackendUrl,
+                    ValidAudience = Globals.Config.BackendUrl,
                     IssuerSigningKey = Signing.AccessTokenKey,
                     RoleClaimType = "role",
                     NameClaimType = "name"
@@ -38,13 +40,16 @@ namespace csgo
             {
                 options.AddPolicy("API", policy =>
                 {
-                    policy.WithOrigins("http://localhost:3000");
+                    policy.WithOrigins(Globals.Config.FrontendUrl);
                     policy.WithHeaders("content-type", "authorization");
                     policy.AllowCredentials();
                 });
             });
-
             builder.Services.AddSwaggerGen();
+            builder.Services.AddHttpLogging(o =>
+            {
+                o.LoggingFields = HttpLoggingFields.All;
+            });
             builder.Services.AddControllersWithViews().AddNewtonsoftJson();
 
             var app = builder.Build();
@@ -56,6 +61,7 @@ namespace csgo
             app.UseSwaggerUI();
             app.MapControllers();
             app.UseSession();
+            app.UseHttpLogging();
             app.Run();
         }
     }

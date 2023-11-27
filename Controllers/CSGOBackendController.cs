@@ -156,9 +156,9 @@ namespace csgo.Controllers
                     // ReSharper disable once UnusedVariable
                     Fido2 fido2 = new(new Fido2Configuration
                     {
-                        ServerDomain = "127.0.0.1",
+                        ServerDomain = new Uri(Globals.Config.BackendUrl).Host,
                         ServerName = "CSGOBackend",
-                        Origins = { "https://127.0.0.1:7233" }
+                        Origins = { Globals.Config.BackendUrl }
                     });
                     //TODO
                     return Ok();
@@ -306,7 +306,7 @@ namespace csgo.Controllers
             return Ok(@case);
         }
 
-        private (string accessToken, string refreshToken) GenerateTokens(User user)
+        private static (string accessToken, string refreshToken) GenerateTokens(User user)
         {
             var claims = new List<Claim>
             {
@@ -317,8 +317,8 @@ namespace csgo.Controllers
 
             // Create session token
             var accessToken = new JwtSecurityToken(
-                issuer: "https://localhost:7233",
-                audience: "https://localhost:7233",
+                issuer: Globals.Config.BackendUrl,
+                audience: Globals.Config.BackendUrl,
                 claims: claims,
                 expires: DateTime.Now.AddMinutes(30),
                 signingCredentials: Signing.AccessTokenCreds);
@@ -326,8 +326,8 @@ namespace csgo.Controllers
 
             // Create refresh token
             var refreshToken = new JwtSecurityToken(
-                issuer: "https://localhost:7233",
-                audience: "https://localhost:7233",
+                issuer: Globals.Config.BackendUrl,
+                audience: Globals.Config.BackendUrl,
                 claims: claims,
                 expires: DateTime.Now.AddDays(7),
                 signingCredentials: Signing.RefreshTokenCreds);
