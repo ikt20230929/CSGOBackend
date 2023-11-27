@@ -2,7 +2,6 @@
 {
     public class Config
     {
-        public string BackendUrl { get; set; } = null!;
-        public string FrontendUrl { get; set; } = null!;
+        public string AppUrl { get; set; } = null!;
     }
 }
