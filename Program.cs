@@ -21,8 +21,8 @@ namespace csgo
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    ValidIssuer = Globals.Config.AppUrl,
-                    ValidAudience = Globals.Config.AppUrl,
+                    ValidIssuer = Globals.Config.BackUrl,
+                    ValidAudience = Globals.Config.BackUrl,
                     IssuerSigningKey = Signing.AccessTokenKey,
                     RoleClaimType = "role",
                     NameClaimType = "name"
@@ -40,7 +40,7 @@ namespace csgo
             {
                 options.AddPolicy("API", policy =>
                 {
-                    policy.WithOrigins(Globals.Config.AppUrl);
+                    policy.WithOrigins(Globals.Config.FrontUrl);
                     policy.WithHeaders("content-type", "authorization");
                     policy.AllowCredentials();
                 });

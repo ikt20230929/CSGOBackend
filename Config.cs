@@ -2,6 +2,10 @@
 {
     public class Config
     {
-        public string AppUrl { get; set; } = null!;
+        // Frontend URL
+        public string FrontUrl { get; set; } = null!;
+
+        // Backend URL
+        public string BackUrl { get; set; } = null!;
     }
 }

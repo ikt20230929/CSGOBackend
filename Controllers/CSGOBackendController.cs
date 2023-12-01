@@ -104,7 +104,9 @@ namespace csgo.Controllers
                 HttpOnly = true,
                 SameSite = SameSiteMode.None,
                 MaxAge = TimeSpan.FromDays(7),
+                #if RELEASE
                 Secure = true
+                #endif
             });
 
             return Ok(new { AccessToken = accessToken });
@@ -156,9 +158,9 @@ namespace csgo.Controllers
                     // ReSharper disable once UnusedVariable
                     Fido2 fido2 = new(new Fido2Configuration
                     {
-                        ServerDomain = new Uri(Globals.Config.AppUrl).Host,
+                        ServerDomain = new Uri(Globals.Config.BackUrl).Host,
                         ServerName = "CSGOBackend",
-                        Origins = { Globals.Config.AppUrl }
+                        Origins = { Globals.Config.BackUrl }
                     });
                     //TODO
                     return Ok();
@@ -317,8 +319,8 @@ namespace csgo.Controllers
 
             // Create session token
             var accessToken = new JwtSecurityToken(
-                issuer: Globals.Config.AppUrl,
-                audience: Globals.Config.AppUrl,
+                issuer: Globals.Config.BackUrl,
+                audience: Globals.Config.BackUrl,
                 claims: claims,
                 expires: DateTime.Now.AddMinutes(30),
                 signingCredentials: Signing.AccessTokenCreds);
@@ -326,8 +328,8 @@ namespace csgo.Controllers
 
             // Create refresh token
             var refreshToken = new JwtSecurityToken(
-                issuer: Globals.Config.AppUrl,
-                audience: Globals.Config.AppUrl,
+                issuer: Globals.Config.BackUrl,
+                audience: Globals.Config.BackUrl,
                 claims: claims,
                 expires: DateTime.Now.AddDays(7),
                 signingCredentials: Signing.RefreshTokenCreds);
@@ -345,7 +347,9 @@ namespace csgo.Controllers
                 HttpOnly = true,
                 SameSite = SameSiteMode.None,
                 MaxAge = TimeSpan.FromDays(7),
+                #if RELEASE 
                 Secure = true
+                #endif
             });
             return Ok(new { AccessToken = accessToken });
 
