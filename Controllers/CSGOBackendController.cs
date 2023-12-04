@@ -70,10 +70,9 @@ namespace csgo.Controllers
             return context.Users.First(x => x.Username == (string)username!);
         }
 
-        private User GetUserFromRefreshJwt()
+        private static User GetUserFromRefreshJwt(string token)
         {
             using var context = new CsgoContext();
-            var token = HttpContext.Request.Cookies["refreshToken"]!;
             var tokenHandler = new JwtSecurityTokenHandler();
             var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
             jwtToken!.Payload.TryGetValue("name", out var username);
@@ -96,7 +95,9 @@ namespace csgo.Controllers
         [Route("refresh-token")]
         public ActionResult RefreshToken()
         {
-            User user = GetUserFromRefreshJwt();
+            var currentRefreshToken = HttpContext.Request.Cookies["refreshToken"];
+            if (currentRefreshToken == null) return Unauthorized();
+            User user = GetUserFromRefreshJwt(currentRefreshToken);
             var (accessToken, refreshToken) = GenerateTokens(user);
 
             Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
@@ -104,9 +105,9 @@ namespace csgo.Controllers
                 HttpOnly = true,
                 SameSite = SameSiteMode.None,
                 MaxAge = TimeSpan.FromDays(7),
-                #if RELEASE
+#if RELEASE
                 Secure = true
-                #endif
+#endif
             });
 
             return Ok(new { AccessToken = accessToken });
