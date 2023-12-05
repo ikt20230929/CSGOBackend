@@ -17,4 +17,6 @@ public class Giveaway
     public virtual Item? Item { get; set; }
 
     public virtual User? WinnerUser { get; set; }
+
+    public virtual ICollection<User> Users { get; set; } = new List<User>();
 }

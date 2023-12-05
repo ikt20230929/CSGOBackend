@@ -193,6 +193,17 @@ namespace csgo.Controllers
             return Ok(context.Items.Select(item => item.ToDto()).ToList());
         }
 
+        [HttpGet]
+        [Route("admin/users")]
+        [Authorize]
+        public ActionResult GetUsers()
+        {
+            User user = GetUserFromJwt();
+            if (!user.IsAdmin) return Forbid();
+            using var context = new CsgoContext();
+            return Ok(context.Users.Select(u => u.ToDto()).ToList());
+        }
+
         [HttpPost]
         [Route("admin/items")]
         [Authorize]

@@ -18,5 +18,10 @@ namespace csgo
         {
             return new Dtos.CaseResponse(@case.CaseId, @case.CaseName, @case.Items.ToList());
         }
+
+        public static Dtos.UserResponse ToDto(this User user)
+        {
+            return new Dtos.UserResponse(user.UserId, user.Username, user.Email, user.Balance, user.LoginStreak, user.TotpEnabled, user.WebauthnEnabled, user.IsAdmin, user.Userinventories.Select(x => x.Item).ToList()!);
+        }
     }
 }

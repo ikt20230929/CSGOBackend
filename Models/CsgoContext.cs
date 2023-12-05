@@ -194,23 +194,18 @@ public partial class CsgoContext : DbContext
                 .HasColumnName("user_id");
             entity.Property(e => e.Balance)
                 .HasPrecision(10, 2)
-                .HasDefaultValueSql("'0.00'")
                 .HasColumnName("balance");
             entity.Property(e => e.Email)
                 .HasMaxLength(255)
                 .HasColumnName("email");
-            entity.Property(e => e.IsAdmin)
-                .HasDefaultValueSql("'0'")
-                .HasColumnName("is_admin");
+            entity.Property(e => e.IsAdmin).HasColumnName("is_admin");
             entity.Property(e => e.LoginStreak)
                 .HasColumnType("int(11)")
                 .HasColumnName("login_streak");
             entity.Property(e => e.PasswordHash)
                 .HasMaxLength(255)
                 .HasColumnName("password_hash");
-            entity.Property(e => e.TotpEnabled)
-                .HasDefaultValueSql("'0'")
-                .HasColumnName("totp_enabled");
+            entity.Property(e => e.TotpEnabled).HasColumnName("totp_enabled");
             entity.Property(e => e.TotpSecret)
                 .HasMaxLength(255)
                 .HasColumnName("totp_secret");
@@ -220,12 +215,36 @@ public partial class CsgoContext : DbContext
             entity.Property(e => e.WebauthnCredentialId)
                 .HasMaxLength(255)
                 .HasColumnName("webauthn_credential_id");
-            entity.Property(e => e.WebauthnEnabled)
-                .HasDefaultValueSql("'0'")
-                .HasColumnName("webauthn_enabled");
+            entity.Property(e => e.WebauthnEnabled).HasColumnName("webauthn_enabled");
             entity.Property(e => e.WebauthnPublicKey)
                 .HasMaxLength(255)
                 .HasColumnName("webauthn_public_key");
+
+            entity.HasMany(d => d.GiveawaysNavigation).WithMany(p => p.Users)
+                .UsingEntity<Dictionary<string, object>>(
+                    "GiveawayUser",
+                    r => r.HasOne<Giveaway>().WithMany()
+                        .HasForeignKey("GiveawayId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("FK_giveaway_users_giveaways"),
+                    l => l.HasOne<User>().WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.ClientSetNull)
+                        .HasConstraintName("FK_giveaway_users_users"),
+                    j =>
+                    {
+                        j.HasKey("UserId", "GiveawayId")
+                            .HasName("PRIMARY")
+                            .HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0 });
+                        j.ToTable("giveaway_users");
+                        j.HasIndex(new[] { "GiveawayId" }, "FK_giveaway_users_giveaways");
+                        j.IndexerProperty<int>("UserId")
+                            .HasColumnType("int(11)")
+                            .HasColumnName("userID");
+                        j.IndexerProperty<int>("GiveawayId")
+                            .HasColumnType("int(11)")
+                            .HasColumnName("giveawayID");
+                    });
         });
 
         modelBuilder.Entity<Userinventory>(entity =>

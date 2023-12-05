@@ -29,4 +29,6 @@ public class User
     public virtual ICollection<Giveaway> Giveaways { get; set; } = new List<Giveaway>();
 
     public virtual ICollection<Userinventory> Userinventories { get; set; } = new List<Userinventory>();
+
+    public virtual ICollection<Giveaway> GiveawaysNavigation { get; set; } = new List<Giveaway>();
 }
