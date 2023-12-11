@@ -46,6 +46,5 @@ namespace csgo
             [Required] [property: JsonProperty("userWebauthnEnabled")] bool WebauthnEnabled,
             [Required] [property: JsonProperty("userIsAdmin")] bool IsAdmin,
             [Required] [property: JsonProperty("userInventoryItems")] List<Models.Item> InventoryItems);
-        public record CaseItem([Required] int CaseId, [Required] int ItemId);
     }
 }

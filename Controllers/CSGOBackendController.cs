@@ -287,33 +287,33 @@ namespace csgo.Controllers
         }
 
         [HttpPost]
-        [Route("admin/cases/items")]
+        [Route("admin/cases/{caseId:int}/items/{itemId:int}")]
         [Authorize]
-        public ActionResult AddCaseItem(CaseItem details)
+        public ActionResult AddCaseItem(int caseId, int itemId)
         {
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();
             using var context = new CsgoContext();
 
-            var @case = context.Cases.Find(details.CaseId);
-            var item = context.Items.Find(details.ItemId);
+            var @case = context.Cases.Find(caseId);
+            var item = context.Items.Find(itemId);
             @case?.Items.Add(item!);
             context.SaveChanges();
 
             return Ok(@case);
         }
 
-        [HttpPost]
-        [Route("admin/cases/items/delete")]
+        [HttpDelete]
+        [Route("admin/cases/{caseId:int}/items/{itemId:int}")]
         [Authorize]
-        public ActionResult DeleteCaseItem(CaseItem details)
+        public ActionResult DeleteCaseItem(int itemId, int caseId)
         {
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();
             using var context = new CsgoContext();
 
-            var @case = context.Cases.Find(details.CaseId);
-            var item = context.Items.Find(details.ItemId);
+            var @case = context.Cases.Find(caseId);
+            var item = context.Items.Find(itemId);
             @case?.Items.Remove(item!);
             context.SaveChanges();
 
