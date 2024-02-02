@@ -27,9 +27,16 @@ public partial class CsgoContext : DbContext
 
     public virtual DbSet<Userinventory> Userinventories { get; set; }
 
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        // TODO: DONT STORE THIS HERE
-        => optionsBuilder.UseMySql("server=127.0.0.1;database=csgo;user id=root", ServerVersion.Parse("10.4.28-mariadb"));
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) // TODO: DONT STORE THIS HERE
+    {
+#if false
+            // doesn't work yet...
+            var path = Path.Join(AppContext.BaseDirectory, "csgo.db");
+            optionsBuilder.UseSqlite($"Data Source={path}");
+#else
+            optionsBuilder.UseMySql("server=127.0.0.1;database=csgo;user id=root", ServerVersion.AutoDetect("server=127.0.0.1;database=csgo;user id=root"));
+#endif
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
