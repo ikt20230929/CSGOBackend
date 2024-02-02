@@ -62,7 +62,7 @@ namespace csgo.Controllers
         private User GetUserFromJwt()
         {
             using var context = new CsgoContext();
-            var token = HttpContext.Request.Headers["Authorization"].ToString().Replace("Bearer ", "");
+            var token = HttpContext.Request.Headers.Authorization.ToString().Replace("Bearer ", "");
             var tokenHandler = new JwtSecurityTokenHandler();
             var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
             jwtToken!.Payload.TryGetValue("name", out var username);
