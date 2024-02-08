@@ -13,23 +13,24 @@ public partial class CsgoContext : DbContext
     {
     }
 
-    public virtual DbSet<Case> Cases { get; set; }
+    public virtual DbSet<Case> Cases { get; set; } = null!;
 
-    public virtual DbSet<Casekey> Casekeys { get; set; }
+    public virtual DbSet<Casekey> Casekeys { get; set; } = null!;
 
-    public virtual DbSet<Giveaway> Giveaways { get; set; }
+    public virtual DbSet<Giveaway> Giveaways { get; set; } = null!;
 
-    public virtual DbSet<Item> Items { get; set; }
+    public virtual DbSet<Item> Items { get; set; } = null!;
 
-    public virtual DbSet<Skin> Skins { get; set; }
+    public virtual DbSet<Skin> Skins { get; set; } = null!;
 
-    public virtual DbSet<User> Users { get; set; }
+    public virtual DbSet<User> Users { get; set; } = null!;
 
-    public virtual DbSet<Userinventory> Userinventories { get; set; }
+    public virtual DbSet<Userinventory> Userinventories { get; set; } = null!;
+
+    private static readonly int[] Value = [0, 0];
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        // TODO: DONT STORE THIS HERE
-        => optionsBuilder.UseMySql("server=127.0.0.1;database=csgo;user id=root", ServerVersion.Parse("10.4.28-mariadb"));
+        => optionsBuilder.UseMySql(Globals.Config.ConnectionString, ServerVersion.Parse(Globals.Config.ConnectionString));
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -65,9 +66,9 @@ public partial class CsgoContext : DbContext
                     {
                         j.HasKey("CaseId", "ItemId")
                             .HasName("PRIMARY")
-                            .HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0 });
+                            .HasAnnotation("MySql:IndexPrefixLength", Value);
                         j.ToTable("case_items");
-                        j.HasIndex(new[] { "ItemId" }, "item_id");
+                        j.HasIndex(["ItemId"], "item_id");
                         j.IndexerProperty<int>("CaseId")
                             .HasColumnType("int(11)")
                             .HasColumnName("case_id");
@@ -235,9 +236,9 @@ public partial class CsgoContext : DbContext
                     {
                         j.HasKey("UserId", "GiveawayId")
                             .HasName("PRIMARY")
-                            .HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0 });
+                            .HasAnnotation("MySql:IndexPrefixLength", Value);
                         j.ToTable("giveaway_users");
-                        j.HasIndex(new[] { "GiveawayId" }, "FK_giveaway_users_giveaways");
+                        j.HasIndex(["GiveawayId"], "FK_giveaway_users_giveaways");
                         j.IndexerProperty<int>("UserId")
                             .HasColumnType("int(11)")
                             .HasColumnName("userID");
