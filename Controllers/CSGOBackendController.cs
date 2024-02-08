@@ -49,24 +49,12 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult Profile()
         {
-            User user = GetUserFromJwt();
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
 
             return Ok(new { 
                 username = user.Username,
                 balance = user.Balance
             });
-        }
-
-
-        private User GetUserFromJwt()
-        {
-
-            var token = HttpContext.Request.Headers.Authorization.ToString().Replace("Bearer ", "");
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
-            jwtToken!.Payload.TryGetValue("name", out var username);
-
-            return context.Users.First(x => x.Username == (string)username!);
         }
 
         private User GetUserFromRefreshJwt(string token)
@@ -83,7 +71,7 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult Inventory()
         {
-            User user = GetUserFromJwt();
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
 
             List<Item> items = context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item).ToList()!;
 
@@ -177,7 +165,7 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult IsAdmin()
         {
-            User user = GetUserFromJwt();
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
             return user.IsAdmin ? NoContent() : Forbid();
         }
 
@@ -186,7 +174,7 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult GetItems()
         {
-            User user = GetUserFromJwt();
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
             return Ok(context.Items.Select(item => item.ToDto()).ToList());
@@ -197,7 +185,7 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult GetUsers()
         {
-            User user = GetUserFromJwt();
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
             return Ok(context.Users.Select(u => u.ToDto()).ToList());
@@ -208,7 +196,7 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult AddItem(Dtos.Item details)
         {
-            User user = GetUserFromJwt();
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
 
@@ -231,7 +219,7 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult GetSkins()
         {
-            User user = GetUserFromJwt();
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
             return Ok(context.Skins.Select(skin => skin.ToDto()).ToList());
@@ -242,7 +230,7 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult AddSkin(Dtos.Skin details)
         {
-            User user = GetUserFromJwt();
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
 
@@ -270,7 +258,7 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult AddCase(Dtos.Case details)
         {
-            User user = GetUserFromJwt();
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
 
@@ -289,7 +277,7 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult AddCaseItem(int caseId, int itemId)
         {
-            User user = GetUserFromJwt();
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
 
@@ -306,7 +294,7 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult DeleteCaseItem(int itemId, int caseId)
         {
-            User user = GetUserFromJwt();
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
 
