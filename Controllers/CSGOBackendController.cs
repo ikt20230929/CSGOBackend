@@ -12,10 +12,9 @@ using Skin = csgo.Models.Skin;
 
 namespace csgo.Controllers
 {
-
     [ApiController]
     [Route("api")]
-    public class CsgoBackendController : ControllerBase
+    public class CsgoBackendController(CsgoContext context) : ControllerBase
     {
         [HttpPost]
         [Route("register")]
@@ -26,8 +25,7 @@ namespace csgo.Controllers
                 Email = register.Email,
                 Username = register.Username
             };
-            using var context = new CsgoContext();
-
+            
             if (context.Users.Any(u => u.Username == register.Username))
             {
                 return BadRequest("Username is already in use.");
@@ -59,9 +57,10 @@ namespace csgo.Controllers
             });
         }
 
+
         private User GetUserFromJwt()
         {
-            using var context = new CsgoContext();
+
             var token = HttpContext.Request.Headers.Authorization.ToString().Replace("Bearer ", "");
             var tokenHandler = new JwtSecurityTokenHandler();
             var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
@@ -70,9 +69,9 @@ namespace csgo.Controllers
             return context.Users.First(x => x.Username == (string)username!);
         }
 
-        private static User GetUserFromRefreshJwt(string token)
+        private User GetUserFromRefreshJwt(string token)
         {
-            using var context = new CsgoContext();
+
             var tokenHandler = new JwtSecurityTokenHandler();
             var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
             jwtToken!.Payload.TryGetValue("name", out var username);
@@ -85,7 +84,7 @@ namespace csgo.Controllers
         public ActionResult Inventory()
         {
             User user = GetUserFromJwt();
-            using var context = new CsgoContext();
+
             List<Item> items = context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item).ToList()!;
 
             return Ok(items);
@@ -117,7 +116,7 @@ namespace csgo.Controllers
         [Route("login")]
         public ActionResult LoginUser(Login login)
         {
-            using var context = new CsgoContext();
+
             var storedUser = context.Users.FirstOrDefault(u => u.Username == login.Username);
 
             if (storedUser == null)
@@ -189,7 +188,7 @@ namespace csgo.Controllers
         {
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();
-            using var context = new CsgoContext();
+
             return Ok(context.Items.Select(item => item.ToDto()).ToList());
         }
 
@@ -200,7 +199,7 @@ namespace csgo.Controllers
         {
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();
-            using var context = new CsgoContext();
+
             return Ok(context.Users.Select(u => u.ToDto()).ToList());
         }
 
@@ -211,7 +210,7 @@ namespace csgo.Controllers
         {
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();
-            using var context = new CsgoContext();
+
 
             Item item = new()
             {
@@ -234,7 +233,7 @@ namespace csgo.Controllers
         {
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();
-            using var context = new CsgoContext();
+
             return Ok(context.Skins.Select(skin => skin.ToDto()).ToList());
         }
 
@@ -245,7 +244,7 @@ namespace csgo.Controllers
         {
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();
-            using var context = new CsgoContext();
+
 
             Skin skin = new()
             {
@@ -263,7 +262,6 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult GetCases()
         {
-            using var context = new CsgoContext();
             return Ok(context.Cases.Select(@case => @case.ToDto()).ToList());
         }
 
@@ -274,7 +272,7 @@ namespace csgo.Controllers
         {
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();
-            using var context = new CsgoContext();
+
 
             Case @case = new()
             {
@@ -293,7 +291,7 @@ namespace csgo.Controllers
         {
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();
-            using var context = new CsgoContext();
+
 
             var @case = context.Cases.Find(caseId);
             var item = context.Items.Find(itemId);
@@ -310,7 +308,7 @@ namespace csgo.Controllers
         {
             User user = GetUserFromJwt();
             if (!user.IsAdmin) return Forbid();
-            using var context = new CsgoContext();
+
 
             var @case = context.Cases.Find(caseId);
             var item = context.Items.Find(itemId);
@@ -359,9 +357,9 @@ namespace csgo.Controllers
                 HttpOnly = true,
                 SameSite = SameSiteMode.None,
                 MaxAge = TimeSpan.FromDays(7),
-                #if RELEASE 
+#if RELEASE
                 Secure = true
-                #endif
+#endif
             });
             return Ok(new { AccessToken = accessToken });
 

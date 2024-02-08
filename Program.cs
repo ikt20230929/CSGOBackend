@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using csgo.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.IdentityModel.Tokens;
@@ -13,6 +14,7 @@ namespace csgo
             JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
             var builder = WebApplication.CreateBuilder(args);
             Globals.Config = builder.Configuration.GetSection("Settings").Get<Config>() ?? throw new Exception("Failed to load config, make sure appsettings.json exists.");
+            builder.Services.AddDbContext<CsgoContext>();
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters

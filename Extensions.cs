@@ -16,7 +16,7 @@ namespace csgo
 
         public static Dtos.CaseResponse ToDto(this Case @case)
         {
-            return new Dtos.CaseResponse(@case.CaseId, @case.CaseName, @case.Items.ToList());
+            return new Dtos.CaseResponse(@case.CaseId, @case.CaseName, [.. @case.Items]);
         }
 
         public static Dtos.UserResponse ToDto(this User user)
