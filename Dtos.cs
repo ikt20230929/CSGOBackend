@@ -46,5 +46,19 @@ namespace csgo
             [Required] [property: JsonProperty("userWebauthnEnabled")] bool WebauthnEnabled,
             [Required] [property: JsonProperty("userIsAdmin")] bool IsAdmin,
             [Required] [property: JsonProperty("userInventoryItems")] List<Models.Item> InventoryItems);
+
+        public record CurrentGiveawayResponse(
+            [property: JsonProperty("giveawayId")] [Required] int GiveawayId,
+            [property: JsonProperty("giveawayName")] [Required] string GiveawayName,
+            [property: JsonProperty("giveawayDescription")] [Required] string GiveawayDescription,
+            [property: JsonProperty("giveawayDate")] [Required] DateOnly GiveawayDate,
+            [property: JsonProperty("item")] [Required] string Item);
+
+        public record PastGiveawayResponse(
+            [property: JsonProperty("giveawayId")] [Required] int GiveawayId,
+            [property: JsonProperty("giveawayName")] [Required] string GiveawayName,
+            [property: JsonProperty("giveawayDescription")] [Required] string GiveawayDescription,
+            [property: JsonProperty("item")] [Required] string Item,
+            [property: JsonProperty("winnerName")] [Required] string WinnerName);
     }
 }

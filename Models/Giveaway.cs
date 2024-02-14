@@ -10,7 +10,7 @@ public class Giveaway
 
     public int? WinnerUserId { get; set; }
 
-    public DateOnly? GiveawayDate { get; set; }
+    public DateOnly GiveawayDate { get; set; }
 
     public int? ItemId { get; set; }
 

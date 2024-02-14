@@ -1,9 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using AutoMapper;
 using csgo.Models;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using OtpNet;
 using static csgo.Dtos;
 using Case = csgo.Models.Case;
@@ -14,7 +16,7 @@ namespace csgo.Controllers
 {
     [ApiController]
     [Route("api")]
-    public class CsgoBackendController(CsgoContext context) : ControllerBase
+    public class CsgoBackendController(CsgoContext context, IMapper mapper) : ControllerBase
     {
         [HttpPost]
         [Route("register")]
@@ -177,7 +179,7 @@ namespace csgo.Controllers
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            return Ok(context.Items.Select(item => item.ToDto()).ToList());
+            return Ok(mapper.Map<List<ItemResponse>>(context.Items));
         }
 
         [HttpGet]
@@ -188,7 +190,7 @@ namespace csgo.Controllers
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            return Ok(context.Users.Select(u => u.ToDto()).ToList());
+            return Ok(mapper.Map<List<UserResponse>>(context.Users));
         }
 
         [HttpPost]
@@ -222,7 +224,7 @@ namespace csgo.Controllers
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            return Ok(context.Skins.Select(skin => skin.ToDto()).ToList());
+            return Ok(mapper.Map<List<SkinResponse>>(context.Skins));
         }
 
         [HttpPost]
@@ -250,7 +252,35 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult GetCases()
         {
-            return Ok(context.Cases.Select(@case => @case.ToDto()).ToList());
+            return Ok(mapper.Map<List<CaseResponse>>(context.Cases));
+        }
+
+        [HttpGet]
+        [Route("giveaways/current")]
+        [Authorize]
+        public async Task<ActionResult> GetGiveaways()
+        {
+            // Giveaways that have not ran yet
+            var giveaways = await context.Giveaways.Where(x => x.GiveawayDate > DateOnly.FromDateTime(DateTime.Now)).Include(x => x.Item).ToListAsync();
+
+            var mapped = giveaways.Select(giveaway => new CurrentGiveawayResponse(giveaway.GiveawayId, giveaway.GiveawayName, giveaway.GiveawayDescription, giveaway.GiveawayDate, giveaway.Item.ItemName)).ToList();
+
+            return Ok(mapped);
+        }
+
+        [HttpGet]
+        [Route("giveaways/past")]
+        [Authorize]
+        public async Task<ActionResult> GetPastGiveaways()
+        {
+            // Giveaways that have already ran, and as such, have a winner
+            var giveaways = await context.Giveaways
+                .Where(x => x.GiveawayDate <= DateOnly.FromDateTime(DateTime.Now) && x.WinnerUserId != null)
+                .Include(x => x.Item).Include(giveaway => giveaway.WinnerUser).ToListAsync();
+            
+            var mapped = giveaways.Select(giveaway => new PastGiveawayResponse(giveaway.GiveawayId, giveaway.GiveawayName, giveaway.GiveawayDescription, giveaway.Item.ItemName, giveaway.WinnerUser.Username)).ToList();
+
+            return Ok(mapped);
         }
 
         [HttpPost]
