@@ -13,10 +13,6 @@ public partial class CsgoContext : DbContext
     {
     }
 
-    public virtual DbSet<Case> Cases { get; set; } = null!;
-
-    public virtual DbSet<Casekey> Casekeys { get; set; } = null!;
-
     public virtual DbSet<Giveaway> Giveaways { get; set; } = null!;
 
     public virtual DbSet<Item> Items { get; set; } = null!;
@@ -26,6 +22,8 @@ public partial class CsgoContext : DbContext
     public virtual DbSet<User> Users { get; set; } = null!;
 
     public virtual DbSet<Userinventory> Userinventories { get; set; } = null!;
+    public virtual DbSet<CaseItem> CaseItems { get; set; } = null!;
+    public virtual DbSet<CaseKey> CaseKeys { get; set; } = null!;
 
     private static readonly int[] Value = [0, 0];
 
@@ -37,67 +35,6 @@ public partial class CsgoContext : DbContext
         modelBuilder
             .UseCollation("utf8mb4_hungarian_ci")
             .HasCharSet("utf8mb4");
-
-        modelBuilder.Entity<Case>(entity =>
-        {
-            entity.HasKey(e => e.CaseId).HasName("PRIMARY");
-
-            entity.ToTable("cases");
-
-            entity.Property(e => e.CaseId)
-                .HasColumnType("int(11)")
-                .HasColumnName("case_id");
-            entity.Property(e => e.CaseName)
-                .HasMaxLength(255)
-                .HasColumnName("case_name");
-
-            entity.HasMany(d => d.Items).WithMany(p => p.Cases)
-                .UsingEntity<Dictionary<string, object>>(
-                    "CaseItem",
-                    r => r.HasOne<Item>().WithMany()
-                        .HasForeignKey("ItemId")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("case_items_ibfk_2"),
-                    l => l.HasOne<Case>().WithMany()
-                        .HasForeignKey("CaseId")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("case_items_ibfk_1"),
-                    j =>
-                    {
-                        j.HasKey("CaseId", "ItemId")
-                            .HasName("PRIMARY")
-                            .HasAnnotation("MySql:IndexPrefixLength", Value);
-                        j.ToTable("case_items");
-                        j.HasIndex(["ItemId"], "item_id");
-                        j.IndexerProperty<int>("CaseId")
-                            .HasColumnType("int(11)")
-                            .HasColumnName("case_id");
-                        j.IndexerProperty<int>("ItemId")
-                            .HasColumnType("int(11)")
-                            .HasColumnName("item_id");
-                    });
-        });
-
-        modelBuilder.Entity<Casekey>(entity =>
-        {
-            entity
-                .HasNoKey()
-                .ToTable("casekeys");
-
-            entity.HasIndex(e => e.CaseId, "case_id");
-
-            entity.Property(e => e.CaseId)
-                .HasColumnType("int(11)")
-                .HasColumnName("case_id");
-            entity.Property(e => e.Price)
-                .HasPrecision(10, 2)
-                .HasDefaultValueSql("'0.00'")
-                .HasColumnName("price");
-
-            entity.HasOne(d => d.Case).WithMany()
-                .HasForeignKey(d => d.CaseId)
-                .HasConstraintName("casekeys_ibfk_1");
-        });
 
         modelBuilder.Entity<Giveaway>(entity =>
         {
@@ -135,6 +72,56 @@ public partial class CsgoContext : DbContext
                 .HasConstraintName("giveaways_ibfk_1");
         });
 
+        modelBuilder.Entity<CaseItem>(entity =>
+        {
+            entity.HasKey(ci => new { ci.CaseId, ci.ItemId }).HasName("PRIMARY");
+
+            entity.ToTable("case_items");
+
+            entity.Property(e => e.CaseId)
+                .HasColumnType("int(11)")
+                .HasColumnName("case_id");
+
+            entity.Property(e => e.ItemId)
+                .HasColumnType("int(11)")
+                .HasColumnName("item_id");
+
+            entity.HasOne(ci => ci.Case)
+                .WithMany()
+                .HasForeignKey(ci => ci.CaseId)
+                .HasConstraintName("case_items_ibfk_1");
+
+            entity.HasOne(ci => ci.Item)
+                .WithMany()
+                .HasForeignKey(ci => ci.ItemId)
+                .HasConstraintName("case_items_ibfk_2");
+        });
+
+        modelBuilder.Entity<CaseKey>(entity =>
+        {
+            entity.HasKey(cki => new { cki.CaseId, cki.CaseKeyId }).HasName("PRIMARY");
+
+            entity.ToTable("case_keys");
+
+            entity.Property(e => e.CaseId)
+                .HasColumnType("int(11)")
+                .HasColumnName("case_id");
+
+            entity.Property(e => e.CaseKeyId)
+                .HasColumnType("int(11)")
+                .HasColumnName("key_id");
+
+            entity.HasOne(ci => ci.Case)
+                .WithMany()
+                .HasForeignKey(ci => ci.CaseId)
+                .HasConstraintName("FK_case_keys_items");
+
+            entity.HasOne(ci => ci.Key)
+                .WithMany()
+                .HasForeignKey(ci => ci.CaseKeyId)
+                .HasConstraintName("FK_case_keys_items_2");
+        });
+
         modelBuilder.Entity<Item>(entity =>
         {
             entity.HasKey(e => e.ItemId).HasName("PRIMARY");
@@ -149,6 +136,9 @@ public partial class CsgoContext : DbContext
             entity.Property(e => e.ItemDescription)
                 .HasColumnType("text")
                 .HasColumnName("item_description");
+            entity.Property(e => e.ItemType)
+                .HasColumnType("int(11)")
+                .HasColumnName("item_type");
             entity.Property(e => e.ItemName)
                 .HasMaxLength(255)
                 .HasColumnName("item_name");

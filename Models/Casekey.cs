@@ -1,10 +1,11 @@
-﻿namespace csgo.Models;
-
-public class Casekey
+﻿namespace csgo.Models
 {
-    public int? CaseId { get; set; }
+    public class CaseKey
+    {
+        public int CaseId { get; set; }
+        public int CaseKeyId { get; set; }
 
-    public decimal? Price { get; set; }
-
-    public virtual Case? Case { get; set; }
+        public Item Case { get; set; } // Represents the case
+        public Item Key { get; set; } // Represents the case key
+    }
 }

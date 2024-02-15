@@ -8,9 +8,11 @@ public class Item
 
     public string? ItemDescription { get; set; }
 
+    public ItemType ItemType { get; set; }
+
     public int Rarity { get; set; }
 
-    public int SkinId { get; set; }
+    public int? SkinId { get; set; }
 
     public decimal ItemValue { get; set; }
     public virtual ICollection<Giveaway> Giveaways { get; set; } = new List<Giveaway>();
@@ -18,6 +20,4 @@ public class Item
     public virtual Skin? Skin { get; set; }
 
     public virtual ICollection<Userinventory> Userinventories { get; set; } = new List<Userinventory>();
-
-    public virtual ICollection<Case> Cases { get; set; } = new List<Case>();
 }

@@ -15,7 +15,9 @@ namespace csgo
             JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
             var builder = WebApplication.CreateBuilder(args);
             Globals.Config = builder.Configuration.GetSection("Settings").Get<Config>() ?? throw new Exception("Failed to load config, make sure appsettings.json exists.");
-            builder.Services.AddAutoMapper(typeof(MappingProfile));
+            builder.Services.AddAutoMapper(cfg => {
+                cfg.AddProfile(new MappingProfile(builder.Services.BuildServiceProvider().GetRequiredService<CsgoContext>())); 
+            });
             builder.Services.AddDbContext<CsgoContext>();
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
             {

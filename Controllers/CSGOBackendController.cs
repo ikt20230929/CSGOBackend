@@ -8,7 +8,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using OtpNet;
 using static csgo.Dtos;
-using Case = csgo.Models.Case;
 using Item = csgo.Models.Item;
 using Skin = csgo.Models.Skin;
 
@@ -179,7 +178,7 @@ namespace csgo.Controllers
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            return Ok(mapper.Map<List<ItemResponse>>(context.Items));
+            return Ok(mapper.Map<List<ItemResponse>>(context.Items.Where(x => x.ItemType == ItemType.Item).ToList()));
         }
 
         [HttpGet]
@@ -224,7 +223,7 @@ namespace csgo.Controllers
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            return Ok(mapper.Map<List<SkinResponse>>(context.Skins));
+            return Ok(mapper.Map<List<SkinResponse>>(context.Skins.ToList()));
         }
 
         [HttpPost]
@@ -252,7 +251,34 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult GetCases()
         {
-            return Ok(mapper.Map<List<CaseResponse>>(context.Cases));
+
+            return Ok(mapper.Map<List<CaseResponse>>(context.Items.Where(x => x.ItemType == ItemType.Case)).ToList());
+        }
+
+        [HttpPost]
+        [Route("open_case")]
+        [Authorize]
+        public ActionResult OpenCase([FromBody] int caseId)
+        {
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+
+            var @case = context.Items.FirstOrDefault(x => x.ItemType == ItemType.Case && x.ItemId == caseId);
+            if(@case == null) return NotFound();
+
+            var key = context.CaseKeys.FirstOrDefault(x => x.CaseId == @case.ItemId);
+            if (key == null) return StatusCode(StatusCodes.Status500InternalServerError);
+
+            var userInventory = context.Userinventories.Where(x => x.UserId == user.UserId).Include(x => x.Item).ToList();
+
+            var userHasCase = userInventory.Any(x => x.Item! == @case);
+            var userHasCaseKey = userInventory.Any(x => x.ItemId == key.CaseKeyId);
+
+            if (userHasCase && userHasCaseKey)
+            {
+                return Ok("TODO");
+            }
+
+            return Forbid();
         }
 
         [HttpGet]
@@ -263,7 +289,14 @@ namespace csgo.Controllers
             // Giveaways that have not ran yet
             var giveaways = await context.Giveaways.Where(x => x.GiveawayDate > DateOnly.FromDateTime(DateTime.Now)).Include(x => x.Item).ToListAsync();
 
-            var mapped = giveaways.Select(giveaway => new CurrentGiveawayResponse(giveaway.GiveawayId, giveaway.GiveawayName, giveaway.GiveawayDescription, giveaway.GiveawayDate, giveaway.Item.ItemName)).ToList();
+            var mapped = giveaways.Select(giveaway => new CurrentGiveawayResponse
+            {
+                GiveawayId = giveaway.GiveawayId,
+                GiveawayName = giveaway.GiveawayName,
+                GiveawayDescription = giveaway.GiveawayDescription!,
+                GiveawayDate = giveaway.GiveawayDate,
+                GiveawayItem = giveaway.Item!.ItemName
+            }).ToList();
 
             return Ok(mapped);
         }
@@ -278,7 +311,14 @@ namespace csgo.Controllers
                 .Where(x => x.GiveawayDate <= DateOnly.FromDateTime(DateTime.Now) && x.WinnerUserId != null)
                 .Include(x => x.Item).Include(giveaway => giveaway.WinnerUser).ToListAsync();
             
-            var mapped = giveaways.Select(giveaway => new PastGiveawayResponse(giveaway.GiveawayId, giveaway.GiveawayName, giveaway.GiveawayDescription, giveaway.Item.ItemName, giveaway.WinnerUser.Username)).ToList();
+            var mapped = giveaways.Select(giveaway => new PastGiveawayResponse
+            {
+                GiveawayDescription = giveaway.GiveawayDescription,
+                GiveawayItem = giveaway.Item.ItemName,
+                GiveawayName = giveaway.GiveawayName,
+                GiveawayId = giveaway.GiveawayId,
+                WinnerName = giveaway.WinnerUser.Username
+            }).ToList();
 
             return Ok(mapped);
         }
@@ -286,17 +326,19 @@ namespace csgo.Controllers
         [HttpPost]
         [Route("admin/cases")]
         [Authorize]
-        public ActionResult AddCase(Dtos.Case details)
+        public ActionResult AddCase(Case details)
         {
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
 
-            Case @case = new()
+            Item @case = new()
             {
-                CaseName = details.Name
+                ItemName = details.Name,
+                ItemType = ItemType.Case,
+                SkinId = null
             };
-            context.Cases.Add(@case);
+            context.Items.Add(@case);
             context.SaveChanges();
 
             return Ok(@case);
@@ -311,12 +353,19 @@ namespace csgo.Controllers
             if (!user.IsAdmin) return Forbid();
 
 
-            var @case = context.Cases.Find(caseId);
-            var item = context.Items.Find(itemId);
-            @case?.Items.Add(item!);
+            var @case = context.Items.FirstOrDefault(x => x.ItemType == ItemType.Case && x.ItemId == caseId);
+            var item = context.Items.FirstOrDefault(x => x.ItemType == ItemType.Item && x.ItemId == itemId);
+
+            if (@case == null || item == null) return NotFound();
+            context.CaseItems.Add(new CaseItem
+            {
+                CaseId = @case.ItemId,
+                ItemId = item.ItemId
+            });
             context.SaveChanges();
 
             return Ok(@case);
+
         }
 
         [HttpDelete]
@@ -328,9 +377,14 @@ namespace csgo.Controllers
             if (!user.IsAdmin) return Forbid();
 
 
-            var @case = context.Cases.Find(caseId);
+            var @case = context.Items.Find(caseId);
             var item = context.Items.Find(itemId);
-            @case?.Items.Remove(item!);
+            if (@case == null || item == null) return NotFound();
+
+            var caseItem = context.CaseItems.Find(caseId, itemId);
+            if(caseItem == null) return NotFound();
+
+            context.CaseItems.Remove(caseItem);
             context.SaveChanges();
 
             return Ok(@case);
