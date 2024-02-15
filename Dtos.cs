@@ -22,39 +22,39 @@ namespace csgo
 
         public record ItemResponse
         {
-            [Required] [JsonProperty("itemId")] public int Id { get; init; }
+            [Required] [JsonProperty("itemId")] public int ItemId { get; init; }
 
-            [Required] [JsonProperty("itemName")] public string? Name { get; init; }
+            [Required] [JsonProperty("itemName")] public string? ItemName { get; init; }
 
             [Required]
             [JsonProperty("itemDescription")]
-            public string? Description { get; init; }
+            public string? ItemDescription { get; init; }
 
             [Required]
             [JsonProperty("itemRarity")]
-            public int Rarity { get; init; }
+            public int ItemRarity { get; init; }
 
             [Required]
             [JsonProperty("itemSkinId")]
             public int ItemSkin { get; init; }
 
-            [Required] [JsonProperty("itemValue")] public decimal Value { get; init; }
+            [Required] [JsonProperty("itemValue")] public decimal ItemValue { get; init; }
         }
 
         public record SkinResponse
         {
-            [Required] [JsonProperty("skinId")] public int Id { get; init; }
+            [Required] [JsonProperty("skinId")] public int SkinId { get; init; }
 
-            [Required] [JsonProperty("skinName")] public string? Name { get; init; }
+            [Required] [JsonProperty("skinName")] public string? SkinName { get; init; }
 
-            [Required] [JsonProperty("skinValue")] public decimal Value { get; init; }
+            [Required] [JsonProperty("skinValue")] public decimal SkinValue { get; init; }
         }
 
         public record CaseResponse
         {
-            [Required] [JsonProperty("caseId")] public int Id { get; init; }
+            [Required] [JsonProperty("caseId")] public int ItemId { get; init; }
 
-            [Required] [JsonProperty("caseName")] public string? Name { get; init; }
+            [Required] [JsonProperty("caseName")] public string? ItemName { get; init; }
 
             [Required] [JsonProperty("items")] public List<Models.Item>? Items { get; init; }
         }

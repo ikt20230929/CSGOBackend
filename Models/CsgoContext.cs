@@ -128,7 +128,7 @@ public partial class CsgoContext : DbContext
 
             entity.ToTable("items");
 
-            entity.HasIndex(e => e.SkinId, "skin_id");
+            entity.HasIndex(e => e.ItemSkinId, "skin_id");
 
             entity.Property(e => e.ItemId)
                 .HasColumnType("int(11)")
@@ -145,15 +145,15 @@ public partial class CsgoContext : DbContext
             entity.Property(e => e.ItemValue)
                 .HasPrecision(10, 2)
                 .HasColumnName("item_value");
-            entity.Property(e => e.Rarity)
+            entity.Property(e => e.ItemRarity)
                 .HasColumnType("int(11)")
                 .HasColumnName("rarity");
-            entity.Property(e => e.SkinId)
+            entity.Property(e => e.ItemSkinId)
                 .HasColumnType("int(11)")
                 .HasColumnName("skin_id");
 
             entity.HasOne(d => d.Skin).WithMany(p => p.Items)
-                .HasForeignKey(d => d.SkinId)
+                .HasForeignKey(d => d.ItemSkinId)
                 .HasConstraintName("items_ibfk_1");
         });
 

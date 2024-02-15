@@ -178,7 +178,7 @@ namespace csgo.Controllers
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            return Ok(mapper.Map<List<ItemResponse>>(context.Items.Where(x => x.ItemType == ItemType.Item).ToList()));
+            return Ok(mapper.Map<List<ItemResponse>>(context.Items.Where(x => x.ItemType == ItemType.Item)));
         }
 
         [HttpGet]
@@ -206,8 +206,8 @@ namespace csgo.Controllers
                 ItemName = details.Name,
                 ItemDescription = details.Description,
                 ItemValue = details.Value,
-                Rarity = details.Rarity,
-                SkinId = details.SkinId
+                ItemRarity = details.Rarity,
+                ItemSkinId = details.SkinId
             };
             context.Items.Add(item);
             context.SaveChanges();
@@ -336,7 +336,7 @@ namespace csgo.Controllers
             {
                 ItemName = details.Name,
                 ItemType = ItemType.Case,
-                SkinId = null
+                ItemSkinId = null
             };
             context.Items.Add(@case);
             context.SaveChanges();
