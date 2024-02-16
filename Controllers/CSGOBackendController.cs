@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using AutoMapper;
 using csgo.Models;
 using Fido2NetLib;
 using Microsoft.AspNetCore.Authorization;
@@ -15,7 +14,7 @@ namespace csgo.Controllers
 {
     [ApiController]
     [Route("api")]
-    public class CsgoBackendController(CsgoContext context, IMapper mapper) : ControllerBase
+    public class CsgoBackendController(CsgoContext context) : ControllerBase
     {
         [HttpPost]
         [Route("register")]
@@ -178,7 +177,7 @@ namespace csgo.Controllers
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            return Ok(mapper.Map<List<ItemResponse>>(context.Items.Where(x => x.ItemType == ItemType.Item)));
+            return Ok(context.Items.Where(x => x.ItemType == ItemType.Item).Select(x => x.ToDto()).ToList());
         }
 
         [HttpGet]
@@ -189,7 +188,9 @@ namespace csgo.Controllers
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            return Ok(mapper.Map<List<UserResponse>>(context.Users));
+            return Ok(context.Users.Select(x => x.ToDto(
+                context.Userinventories.Where(y => y.UserId == x.UserId)
+                    .Select(z => z.Item).ToList()!)).ToList());
         }
 
         [HttpPost]
@@ -223,7 +224,7 @@ namespace csgo.Controllers
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            return Ok(mapper.Map<List<SkinResponse>>(context.Skins.ToList()));
+            return Ok(context.Skins.Select(x => x.ToDto()).ToList());
         }
 
         [HttpPost]
@@ -252,7 +253,11 @@ namespace csgo.Controllers
         public ActionResult GetCases()
         {
 
-            return Ok(mapper.Map<List<CaseResponse>>(context.Items.Where(x => x.ItemType == ItemType.Case)).ToList());
+            return Ok(context.Items.Where(x => x.ItemType == ItemType.Case).Select(
+                x => x.ToCaseDto(
+                    context.CaseItems
+                        .Where(y => y.CaseId == x.ItemId)
+                        .Select(z => z.Item).ToList())).ToList());
         }
 
         [HttpPost]
@@ -314,10 +319,10 @@ namespace csgo.Controllers
             var mapped = giveaways.Select(giveaway => new PastGiveawayResponse
             {
                 GiveawayDescription = giveaway.GiveawayDescription,
-                GiveawayItem = giveaway.Item.ItemName,
+                GiveawayItem = giveaway.Item?.ItemName,
                 GiveawayName = giveaway.GiveawayName,
                 GiveawayId = giveaway.GiveawayId,
-                WinnerName = giveaway.WinnerUser.Username
+                WinnerName = giveaway.WinnerUser?.Username
             }).ToList();
 
             return Ok(mapped);
