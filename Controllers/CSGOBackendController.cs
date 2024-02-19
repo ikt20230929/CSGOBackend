@@ -28,12 +28,12 @@ namespace csgo.Controllers
             
             if (context.Users.Any(u => u.Username == register.Username))
             {
-                return BadRequest("Username is already in use.");
+                return BadRequest(new { status = "ERR", message = "A megadott felhasználónév már foglalt." });
             }
 
             if (context.Users.Any(u => u.Email == register.Email))
             {
-                return BadRequest("Email is already in use.");
+                return BadRequest(new { status = "ERR", message = "Az megadott e-mail már használatban van." });
             }
 
             string hashedPassword = BCrypt.Net.BCrypt.HashPassword(register.Password);
@@ -41,7 +41,7 @@ namespace csgo.Controllers
             context.Users.Add(newUser);
             context.SaveChanges();
 
-            return Ok("Registration successful.");
+            return Ok(new { status = "OK", message = "Sikeres regisztráció!" });
         }
 
         [HttpGet]
@@ -104,12 +104,11 @@ namespace csgo.Controllers
         [Route("login")]
         public ActionResult LoginUser(Login login)
         {
-
             var storedUser = context.Users.FirstOrDefault(u => u.Username == login.Username);
 
             if (storedUser == null)
             {
-                return BadRequest("InvalidCredentials");
+                return BadRequest(new { status = "ERR", message = "InvalidCredential" });
             }
 
             string? twoFactorScenario = null;
@@ -128,21 +127,21 @@ namespace csgo.Controllers
             }
 
             if (twoFactorScenario == null) return CheckPassword(login.Password, storedUser);
-            if (login.Mfa == null) return Unauthorized(twoFactorScenario);
+            if (login.Mfa == null) return Unauthorized(new { status = "UI", message = twoFactorScenario });
             switch (login.Mfa.MfaType)
             {
                 case MfaType.Totp:
                 {
-                    if (!storedUser.TotpEnabled) return BadRequest("InvalidMFAMethod");
-                    if (login.Mfa.TotpToken == null) return BadRequest("InvalidTotp");
+                    if (!storedUser.TotpEnabled) return BadRequest(new { status = "ERR", message = "InvalidMFAMethod" });
+                    if (login.Mfa.TotpToken == null) return BadRequest(new { status = "ERR", message = "InvalidTotp" });
                     var totp = new Totp(Base32Encoding.ToBytes(storedUser.TotpSecret));
                     bool verify = totp.VerifyTotp(login.Mfa.TotpToken, out _,
                         VerificationWindow.RfcSpecifiedNetworkDelay);
-                    return verify ? CheckPassword(login.Password, storedUser) : BadRequest("InvalidTotp");
+                    return verify ? CheckPassword(login.Password, storedUser) : BadRequest(new { status = "ERR", message = "InvalidTotp" });
                 }
                 case MfaType.WebAuthn:
                 {
-                    if (!storedUser.WebauthnEnabled) return BadRequest("InvalidMFAMethod");
+                    if (!storedUser.WebauthnEnabled) return BadRequest(new { status = "ERR", message = "InvalidMFAMethod" });
                     // ReSharper disable once UnusedVariable
                     Fido2 fido2 = new(new Fido2Configuration
                     {
@@ -155,7 +154,7 @@ namespace csgo.Controllers
                 }
                 default:
                 {
-                    return BadRequest("InvalidCredential");
+                    return BadRequest(new { status = "ERR", message = "InvalidCredential" });
                 }
             }
         }
@@ -275,15 +274,29 @@ namespace csgo.Controllers
 
             var userInventory = context.Userinventories.Where(x => x.UserId == user.UserId).Include(x => x.Item).ToList();
 
-            var userHasCase = userInventory.Any(x => x.Item! == @case);
-            var userHasCaseKey = userInventory.Any(x => x.ItemId == key.CaseKeyId);
+            var userCase = userInventory.Find(x => x.Item! == @case);
+            var userCaseKey = userInventory.Find(x => x.ItemId == key.CaseKeyId);
 
-            if (userHasCase && userHasCaseKey)
+            if (userCase == null || userCaseKey == null) return Forbid();
             {
-                return Ok("TODO");
+                var caseItems = context.CaseItems.Where(x => x.Case == @case).ToArray();
+                // for now its Random.Shared, but in the future we need some weighted chance stuff here
+                var resultItem = Random.Shared.GetItems(caseItems, 1)[0];
+
+                context.Userinventories.Remove(userCase);
+                context.Userinventories.Remove(userCaseKey);
+                context.Userinventories.Add(new Userinventory
+                {
+                    InventoryId = userInventory.First().InventoryId,
+                    ItemId = resultItem.ItemId,
+                    ItemUpgradedAmount = 0,
+                    UserId = user.UserId
+                });
+                context.SaveChanges();
+
+                return Ok(resultItem);
             }
 
-            return Forbid();
         }
 
         [HttpGet]
@@ -438,7 +451,7 @@ namespace csgo.Controllers
                 Secure = true
 #endif
             });
-            return Ok(new { AccessToken = accessToken });
+            return Ok(new { status = "OK", message = accessToken });
 
         }
     }

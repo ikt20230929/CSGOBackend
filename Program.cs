@@ -82,6 +82,11 @@ namespace csgo
             builder.Services.AddControllersWithViews().AddNewtonsoftJson();
 
             var app = builder.Build();
+            using (var serviceScope = app.Services.CreateScope())
+            {
+                var context = serviceScope.ServiceProvider.GetRequiredService<CsgoContext>();
+                context.Database.EnsureCreated();
+            }
             app.UseCors("API");
             app.UseHttpsRedirection();
             app.UseAuthentication();
