@@ -97,7 +97,7 @@ namespace csgo.Controllers
 #endif
             });
 
-            return Ok(new { AccessToken = accessToken });
+            return Ok(new { status = "OK", message = accessToken });
         }
 
         [HttpPost]
