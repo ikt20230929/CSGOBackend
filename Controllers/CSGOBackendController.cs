@@ -16,6 +16,13 @@ namespace csgo.Controllers
     [Route("api")]
     public class CsgoBackendController(CsgoContext context) : ControllerBase
     {
+        /// <summary>
+        /// Registers a new user.
+        /// </summary>
+        /// <param name="register"></param>
+        /// <returns>"OK" or "ERR"</returns>
+        /// <response code="200">OK</response>
+        /// <response code="400">ERR</response>
         [HttpPost]
         [Route("register")]
         public ActionResult Register(Register register)
@@ -28,12 +35,12 @@ namespace csgo.Controllers
             
             if (context.Users.Any(u => u.Username == register.Username))
             {
-                return BadRequest(new { status = "ERR", message = "A megadott felhasználónév már foglalt." });
+                return BadRequest(new { status = "ERR", message = "A megadott felhasznï¿½lï¿½nï¿½v mï¿½r foglalt." });
             }
 
             if (context.Users.Any(u => u.Email == register.Email))
             {
-                return BadRequest(new { status = "ERR", message = "Az megadott e-mail már használatban van." });
+                return BadRequest(new { status = "ERR", message = "Az megadott e-mail mï¿½r hasznï¿½latban van." });
             }
 
             string hashedPassword = BCrypt.Net.BCrypt.HashPassword(register.Password);
@@ -41,10 +48,12 @@ namespace csgo.Controllers
             context.Users.Add(newUser);
             context.SaveChanges();
 
-            return Ok(new { status = "OK", message = "Sikeres regisztráció!" });
+            return Ok(new { status = "OK", message = "Sikeres regisztrï¿½ciï¿½!" });
         }
 
         [HttpGet]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
         [Route("profile")]
         [Authorize]
         public ActionResult Profile()

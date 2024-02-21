@@ -2,34 +2,75 @@
 
 namespace csgo.Models;
 
+/// <summary>
+/// Entity Framework adatbázis kontextus.
+/// </summary>
 public partial class CsgoContext : DbContext
 {
+    /// <summary>
+    /// Létrehoz egy új adatbázis kontextust.
+    /// </summary>
     public CsgoContext()
     {
     }
 
+    /// <summary>
+    /// Létrehoz egy új adatbázis kontextust.
+    /// </summary>
+    /// <param name="options">A kontextus beállításai</param>
     public CsgoContext(DbContextOptions<CsgoContext> options)
         : base(options)
     {
     }
 
+    /// <summary>
+    /// Az adatbázisban lévő nyereményjátékok listája
+    /// </summary>
     public virtual DbSet<Giveaway> Giveaways { get; set; } = null!;
 
+    /// <summary>
+    /// Az adatbázisban levő tárgyak listája
+    /// </summary>
     public virtual DbSet<Item> Items { get; set; } = null!;
 
+    /// <summary>
+    /// Az adatbázisban lévő skinek listája
+    /// </summary>
     public virtual DbSet<Skin> Skins { get; set; } = null!;
 
+    /// <summary>
+    /// Az adatbázisban lévő felhasználók listája
+    /// </summary>
     public virtual DbSet<User> Users { get; set; } = null!;
 
+    /// <summary>
+    /// Az adatbázisban levö felhasználói leltárak listája 
+    /// </summary>
     public virtual DbSet<Userinventory> Userinventories { get; set; } = null!;
+
+    /// <summary>
+    /// Az adatbázisban levö láda-tárgy párok listája
+    /// </summary>
     public virtual DbSet<CaseItem> CaseItems { get; set; } = null!;
+
+    /// <summary>
+    /// Az adatbázisban levö láda kulcsok listája
+    /// </summary>
     public virtual DbSet<CaseKey> CaseKeys { get; set; } = null!;
 
     private static readonly int[] Value = [0, 0];
 
+    /// <summary>
+    /// A MySQL használatára konfigurálja a kontextust.
+    /// </summary>
+    /// <param name="optionsBuilder">Az adatbázis beállításai</param>
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        => optionsBuilder.UseMySql(Globals.Config.ConnectionString, ServerVersion.Parse(Globals.Config.ConnectionString));
+            => optionsBuilder.UseMySql(Globals.Config.ConnectionString, ServerVersion.Parse(Globals.Config.ConnectionString));
 
+    /// <summary>
+    /// Konfigurálja az adatbázis-kontextus entitásmodelljeit.
+    /// </summary>
+    /// <param name="modelBuilder">A kontextus beállításai</param>
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder

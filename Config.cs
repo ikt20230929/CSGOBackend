@@ -1,26 +1,44 @@
 ﻿namespace csgo
 {
+    /// <summary>
+    /// Az alkalmazás beállításai
+    /// </summary>
     public class Config
     {
-        // Frontend URL
+        /// <summary>
+        /// Frontend URL-címe
+        /// </summary>
         public string FrontUrl { get; set; } = null!;
 
-        // Backend URL
+        /// <summary>
+        /// Backend URL-címe
+        /// </summary>
         public string BackUrl { get; set; } = null!;
 
-        // JWT settings
+        /// <summary>
+        /// JWT beállítások
+        /// </summary>
         public JwtSettings Jwt { get; set; } = new();
 
-        // Connection string
+        /// <summary>
+        /// Adatbázis csatlakozási karakterlánca
+        /// </summary>
         public string ConnectionString { get; set; } = null!;
     }
 
+    /// <summary>
+    /// JWT beá
+    /// </summary>
     public class JwtSettings
     {
-        // Access token key
+        /// <summary>
+        /// Access token kulcs
+        /// </summary>
         public string AccessTokenKey { get; set; } = null!;
 
-        // Refresh token key
+        /// <summary>
+        /// Refresh token kulcs
+        /// </summary>
         public string RefreshTokenKey { get; set; } = null!;
     }
 }

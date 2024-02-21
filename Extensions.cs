@@ -1,8 +1,16 @@
 ﻿using csgo.Models;
 namespace csgo
 {
+    /// <summary>
+    /// DTO konvertálásban segítő metódusok
+    /// </summary>
     public static class Extensions
     {
+        /// <summary>
+        /// Skin modell konvertálása DTO-ra
+        /// </summary>
+        /// <param name="skin">A Skin modell</param>
+        /// <returns>Egy Skin DTO</returns>
         public static Dtos.SkinResponse ToDto(this Skin skin)
         {
             return new Dtos.SkinResponse
@@ -13,6 +21,11 @@ namespace csgo
             };
         }
 
+        /// <summary>
+        /// Tárgy modell konvertálása DTO-ra
+        /// </summary>
+        /// <param name="item">A Tárgy modell</param>
+        /// <returns>Egy Tárgy DTO</returns>
         public static Dtos.ItemResponse ToDto(this Item item)
         {
           return new Dtos.ItemResponse
@@ -26,6 +39,12 @@ namespace csgo
           };
         }
 
+        /// <summary>
+        /// Láda modell konvertálása DTO-ra
+        /// </summary>
+        /// <param name="case">A Láda modell</param>
+        /// <param name="items">A Ládahoz tartózó elemek listája</param>
+        /// <returns>Egy Láda DTO</returns>
         public static Dtos.CaseResponse ToCaseDto(this Item @case, List<Item> items)
         {
             return new Dtos.CaseResponse{
@@ -35,6 +54,12 @@ namespace csgo
             };
         }
 
+        /// <summary>
+        /// Felhasználó modell konvertálása DTO-ra
+        /// </summary>
+        /// <param name="user">A Felhasználó modell</param>
+        /// <param name="items">A felhsaználó leltárában lévő elemek listája</param>
+        /// <returns>Egy Felhasználó DTO</returns>
         public static Dtos.UserResponse ToDto(this User user, List<Item> items)
         {
             return new Dtos.UserResponse {

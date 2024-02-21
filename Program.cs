@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection;
 using csgo.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpLogging;
@@ -7,8 +8,15 @@ using Microsoft.OpenApi.Models;
 
 namespace csgo
 {
+    /// <summary>
+    /// A Program osztály.
+    /// </summary>
     public class Program
     {
+        /// <summary>
+        /// Az alkalmazás fő belépési pontja.
+        /// </summary>
+        /// <param name="args">Parancssori argumentumok</param>
         public static void Main(string[] args)
         {
             JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
@@ -74,6 +82,9 @@ namespace csgo
                         Array.Empty<string>()
                     }
                 });
+
+                var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                option.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
             });
             builder.Services.AddHttpLogging(o =>
             {
@@ -100,3 +111,4 @@ namespace csgo
         }
     }
 }
+
