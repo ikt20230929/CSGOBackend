@@ -60,10 +60,10 @@ namespace csgo.Controllers
         }
 
         /// <summary>
-        /// Felhasználó profil adatainak lekérése.
+        /// A jelenleg bejelentkezett felhasználó profil adatainak lekérése.
         /// </summary>
-        /// <returns>A felhasználó felhasználónevét, és a jelenlegi egyenlegét.</returns>
-        /// <response code="200">Visszaadja a felhasználó felhasználónevét, és a jelenlegi egyenlegét.</response>
+        /// <returns>A jelenleg bejelentkezett felhasználónevét, és a jelenlegi egyenlegét.</returns>
+        /// <response code="200">Visszaadja a jelenleg bejelentkezett felhasználónevét, és a jelenlegi egyenlegét.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpGet]
         [ProducesResponseType(typeof(ProfileResponse), StatusCodes.Status200OK)]
@@ -97,10 +97,10 @@ namespace csgo.Controllers
         }
 
         /// <summary>
-        /// A felhasználó leltárában lévő tárgyak lekérése.
+        /// A jelenleg bejelentkezett felhasználó leltárában lévő tárgyak lekérése.
         /// </summary>
-        /// <returns>A felhasználó leltárában lévő tárgyak listáját.</returns>
-        /// <response code="200">Visszaadja a felhasználó leltárában lévő tárgyak listáját.</response>
+        /// <returns>A jelenleg bejelentkezett felhasználó leltárában lévő tárgyak listáját.</returns>
+        /// <response code="200">Visszaadja A jelenleg bejelentkezett felhasználó leltárában lévő tárgyak listáját.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpGet]
         [ProducesResponseType(typeof(List<ItemResponse>), StatusCodes.Status200OK)]
@@ -221,11 +221,11 @@ namespace csgo.Controllers
         }
 
         /// <summary>
-        /// Egy felhasználó admin jogainak ellenőrzése.
+        /// A jelenleg bejelentkezett felhasználó admin jogainak ellenőrzése.
         /// </summary>
-        /// <returns>204-es állapotkódot ha a felhasználó rendelkezik admin jogokkal, különben 403-as állapotkódot.</returns>
-        /// <response code="204">A felhasználó rendelkezik admin jogokkal.</response>
-        /// <response code="403">A felhasználó nem rendelkezik admin jogokkal.</response>
+        /// <returns>204-es állapotkódot ha a jelenleg bejelentkezett felhasználó rendelkezik admin jogokkal, különben 403-as állapotkódot.</returns>
+        /// <response code="204">A jelenleg bejelentkezett felhasználó rendelkezik admin jogokkal.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpGet]
         [Route("admin/check")]
@@ -246,7 +246,7 @@ namespace csgo.Controllers
         /// </summary>
         /// <returns>Egy listát, ami tartalmazza az összes tárgy adatait.</returns>
         /// <response code="200">Visszaad egy listát, ami tartalmazza az összes tárgy adatait.</response>
-        /// <response code="403">A felhasználó nem rendelkezik admin jogokkal.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpGet]
         [Route("admin/items")]
@@ -269,7 +269,7 @@ namespace csgo.Controllers
         /// </summary>
         /// <returns>Egy listát, ami tartalmazza az összes felhasználó adatait.</returns>
         /// <response code="200">Visszaad egy listát, ami tartalmazza az összes felhasználó adatait.</response>
-        /// <response code="403">A felhasználó nem rendelkezik admin jogokkal.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpGet]
         [Route("admin/users")]
@@ -295,7 +295,7 @@ namespace csgo.Controllers
         /// <param name="details">A tárgy leírása.</param>
         /// <returns>A tárgy leírását.</returns>
         /// <response code="200">Visszaadja a tárgy leírását.</response>
-        /// <response code="403">A felhasználó nem rendelkezik admin jogokkal.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpPost]
         [Route("admin/items")]
@@ -330,7 +330,7 @@ namespace csgo.Controllers
         /// </summary>
         /// <returns>Egy listát, ami tartalmazza az összes skin adatait.</returns>
         /// <response code="200">Visszaad egy listát, ami tartalmazza az összes skin adatait.</response>
-        /// <response code="403">A felhasználó nem rendelkezik admin jogokkal.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpGet]
         [Route("admin/skins")]
@@ -354,7 +354,7 @@ namespace csgo.Controllers
         /// <param name="details">A skin leírása.</param>
         /// <returns>A skin leírását.</returns>
         /// <response code="200">Visszaadja a skin leírását.</response>
-        /// <response code="403">A felhasználó nem rendelkezik admin jogokkal.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpPost]
         [Route("admin/skins")]
@@ -526,7 +526,7 @@ namespace csgo.Controllers
         /// <param name="details">A láda leírása.</param>
         /// <returns>A láda leírását.</returns>
         /// <response code="200">Visszaadja a láda leírását.</response>
-        /// <response code="403">A felhasználó nem rendelkezik admin jogokkal.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpPost]
         [Route("admin/cases")]
@@ -561,7 +561,7 @@ namespace csgo.Controllers
         /// <param name="itemId">A hozzáadandó tárgy azonosítója.</param>
         /// <returns>A láda frissített adatait.</returns>
         /// <response code="200">Visszaadja a láda frissített adatait.</response>
-        /// <response code="403">A felhasználó nem rendelkezik admin jogokkal.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpPost]
         [Route("admin/cases/{caseId:int}/items/{itemId:int}")]
@@ -599,7 +599,7 @@ namespace csgo.Controllers
         /// <param name="itemId">A eltávolítandó tárgy azonosítója.</param>
         /// <returns>A láda frissített adatait.</returns>
         /// <response code="200">Visszaadja a láda frissített adatait.</response>
-        /// <response code="403">A felhasználó nem rendelkezik admin jogokkal.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpDelete]
         [Route("admin/cases/{caseId:int}/items/{itemId:int}")]
