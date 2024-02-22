@@ -28,7 +28,7 @@ public class Userinventory
     /// <summary>
     /// Egy leltárban lévő elem
     /// </summary>
-    public virtual Item? Item { get; set; }
+    public virtual Item Item { get; set; } = null!;
 
     /// <summary>
     /// Azon felhasználó, akihez a leltár tartozik

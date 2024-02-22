@@ -53,7 +53,7 @@ public class Item
     /// <summary>
     /// A tárgy skine
     /// </summary>
-    public virtual Skin? Skin { get; set; }
+    public virtual Skin Skin { get; set; } = null!;
 
     /// <summary>
     /// Azon felhasználói leltárak, amelyek tartalmazzák ezt a tárgyat

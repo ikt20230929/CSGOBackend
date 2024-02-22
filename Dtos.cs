@@ -51,7 +51,8 @@ namespace csgo
         /// Egy láda leírása
         /// </summary>
         /// <param name="Name">A láda neve</param>
-        public record CaseRecord([Required] string Name);
+        /// <param name="Value">A láda értéke</param>
+        public record CaseRecord([Required] string Name, [Required] decimal Value);
 
         /// <summary>
         /// Egy állapot üzenet leírása
@@ -93,9 +94,14 @@ namespace csgo
             [Required][JsonProperty("itemRarity")] public int ItemRarity { get; init; }
 
             /// <summary>
-            /// A tárgy skinének azonosítója
+            /// A tárgy skinének neve
             /// </summary>
-            [Required][JsonProperty("itemSkinId")] public int ItemSkin { get; init; }
+            [Required][JsonProperty("itemSkinName")] public string ItemSkinName { get; init; } = null!;
+
+            /// <summary>
+            /// A tárgy skinének értéke
+            /// </summary>
+            [Required][JsonProperty("itemSkinValue")] public decimal ItemSkinValue { get; init; }
 
             /// <summary>
             /// A tárgy képének URL-je

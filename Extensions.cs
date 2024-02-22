@@ -35,7 +35,8 @@ namespace csgo
               ItemDescription = item.ItemDescription,
               ItemId = item.ItemId,
               ItemRarity = item.ItemRarity,
-              ItemSkin = (int)item.ItemSkinId!,
+              ItemSkinName = item.Skin!.SkinName,
+              ItemSkinValue = item.Skin!.SkinValue,
               ItemAssetUrl = item.ItemAssetUrl
           };
         }

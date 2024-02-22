@@ -113,7 +113,7 @@ namespace csgo.Controllers
         {
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
 
-            List<ItemResponse> items = context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item!.ToDto()).ToList();
+            List<ItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Include(y => y.Item.Skin).Select(x => x.Item.ToDto())];
 
             return Ok(items);
         }
@@ -261,7 +261,7 @@ namespace csgo.Controllers
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            return Ok(context.Items.Where(x => x.ItemType == ItemType.Item).Select(x => x.ToDto()).ToList());
+            return Ok(context.Items.Where(x => x.ItemType == ItemType.Item).Include(y => y.Skin).Select(x => x.ToDto()).ToList());
         }
 
         /// <summary>
@@ -286,7 +286,8 @@ namespace csgo.Controllers
 
             return Ok(context.Users.Select(x => x.ToDto(
                 context.Userinventories.Where(y => y.UserId == x.UserId)
-                    .Select(z => z.Item!.ToDto()).ToList())).ToList());
+                    .Include(o => o.Item.Skin)
+                    .Select(z => z.Item.ToDto()).ToList())).ToList());
         }
 
         /// <summary>
@@ -321,6 +322,8 @@ namespace csgo.Controllers
             };
             context.Items.Add(item);
             context.SaveChanges();
+
+            item.Skin = context.Skins.Find(item.ItemSkinId)!;
 
             return Ok(item.ToDto());
         }
@@ -400,7 +403,8 @@ namespace csgo.Controllers
                 x => x.ToCaseDto(
                     context.CaseItems
                         .Where(y => y.CaseId == x.ItemId)
-                        .Select(z => z.Item.ToDto()).ToList())).ToList());
+                        .Include(y => y.Item.Skin)
+                        .Select(z => z.Item).Select(z => z.ToDto()).ToList())).ToList());
         }
 
         /// <summary>
@@ -430,11 +434,11 @@ namespace csgo.Controllers
 
             var userInventory = context.Userinventories.Where(x => x.UserId == user.UserId).Include(x => x.Item).ToList();
 
-            var userCase = userInventory.Find(x => x.Item! == @case);
+            var userCase = userInventory.Find(x => x.Item == @case);
 
             if (userCase == null) return Forbid();
             {
-                var caseItems = context.CaseItems.Where(x => x.Case == @case).ToArray();
+                var caseItems = context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).Include(z => z.Item.Skin).ToArray();
                 // Egyenlőre Random.Shared-et használunk itt, de később valami százalékos esély algoritmust kell ide raknunk.
                 var resultItem = Random.Shared.GetItems(caseItems, 1)[0];
 
@@ -448,7 +452,7 @@ namespace csgo.Controllers
                 });
                 context.SaveChanges();
 
-                return Ok(resultItem);
+                return Ok(resultItem.Item.ToDto());
             }
 
         }
@@ -541,12 +545,13 @@ namespace csgo.Controllers
             {
                 ItemName = details.Name,
                 ItemType = ItemType.Case,
+                ItemValue = details.Value,
                 ItemSkinId = null
             };
             context.Items.Add(@case);
             context.SaveChanges();
 
-            return Ok(@case);
+            return Ok(@case.ToCaseDto(new List<ItemResponse>()));
         }
 
         /// <summary>
@@ -576,14 +581,17 @@ namespace csgo.Controllers
             var item = context.Items.FirstOrDefault(x => x.ItemType == ItemType.Item && x.ItemId == itemId);
 
             if (@case == null || item == null) return NotFound();
+
             context.CaseItems.Add(new CaseItem
             {
                 CaseId = @case.ItemId,
                 ItemId = item.ItemId
             });
             context.SaveChanges();
+            
+            var caseItems = context.CaseItems.Where(x => x.Case == @case).Include(x => x.Item.Skin).Select(x => x.Item.ToDto()).ToList();
 
-            return Ok(@case);
+            return Ok(@case.ToCaseDto(caseItems));
 
         }
 
@@ -599,7 +607,7 @@ namespace csgo.Controllers
         [HttpDelete]
         [Route("admin/cases/{caseId:int}/items/{itemId:int}")]
         [Authorize]
-        public ActionResult DeleteCaseItem(int itemId, int caseId)
+        public ActionResult DeleteCaseItem(int caseId, int itemId)
         {
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
@@ -615,7 +623,9 @@ namespace csgo.Controllers
             context.CaseItems.Remove(caseItem);
             context.SaveChanges();
 
-            return Ok(@case);
+            var caseItems = context.CaseItems.Where(x => x.Case == @case).Include(x => x.Item.Skin).Select(x => x.Item.ToDto()).ToList();
+
+            return Ok(@case.ToCaseDto(caseItems));
         }
 
         private static (string accessToken, string refreshToken) GenerateTokens(User user)
