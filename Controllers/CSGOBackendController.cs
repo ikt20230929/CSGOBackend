@@ -410,11 +410,13 @@ namespace csgo.Controllers
         /// <returns>A megszerzett tárgy adatait.</returns>
         /// <response code="200">Visszaadja a megszerzett tárgy adatait.</response>
         /// <response code="404">A megadott láda nem létezik.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználónak a leltárában nem található az adott láda.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpPost]
         [Route("open_case/{caseId}")]
         [ProducesResponseType(typeof(ItemResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Consumes("application/json")]
         [Produces("application/json")]
