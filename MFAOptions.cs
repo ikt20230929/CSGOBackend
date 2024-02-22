@@ -28,7 +28,7 @@ namespace csgo
         /// TOTP jelszó
         /// </summary>
         [Required][JsonProperty("totpToken")]
-        public string TotpToken { get; set; } = null!;
+        public string? TotpToken { get; set; }
 
         /// <summary>
         /// Két faktoros belépés típusa

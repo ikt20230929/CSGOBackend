@@ -113,7 +113,7 @@ namespace csgo.Controllers
         {
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
 
-            List<ItemResponse> items = context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item!.ToDto()).ToList()!;
+            List<ItemResponse> items = context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item!.ToDto()).ToList();
 
             return Ok(items);
         }
@@ -286,7 +286,7 @@ namespace csgo.Controllers
 
             return Ok(context.Users.Select(x => x.ToDto(
                 context.Userinventories.Where(y => y.UserId == x.UserId)
-                    .Select(z => z.Item!.ToDto()).ToList()!)).ToList());
+                    .Select(z => z.Item!.ToDto()).ToList())).ToList());
         }
 
         /// <summary>
@@ -400,7 +400,7 @@ namespace csgo.Controllers
                 x => x.ToCaseDto(
                     context.CaseItems
                         .Where(y => y.CaseId == x.ItemId)
-                        .Select(z => z.Item!.ToDto()).ToList())).ToList());
+                        .Select(z => z.Item.ToDto()).ToList())).ToList());
         }
 
         /// <summary>
@@ -410,13 +410,11 @@ namespace csgo.Controllers
         /// <returns>A megszerzett tárgy adatait.</returns>
         /// <response code="200">Visszaadja a megszerzett tárgy adatait.</response>
         /// <response code="404">A megadott láda nem létezik.</response>
-        /// <response code="500">Hiba történt a kulcs keresése közben.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpPost]
         [Route("open_case/{caseId}")]
         [ProducesResponseType(typeof(ItemResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status500InternalServerError)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Consumes("application/json")]
         [Produces("application/json")]
@@ -428,22 +426,17 @@ namespace csgo.Controllers
             var @case = context.Items.FirstOrDefault(x => x.ItemType == ItemType.Case && x.ItemId == caseId);
             if(@case == null) return NotFound();
 
-            var key = context.CaseKeys.FirstOrDefault(x => x.CaseId == @case.ItemId);
-            if (key == null) return StatusCode(StatusCodes.Status500InternalServerError);
-
             var userInventory = context.Userinventories.Where(x => x.UserId == user.UserId).Include(x => x.Item).ToList();
 
             var userCase = userInventory.Find(x => x.Item! == @case);
-            var userCaseKey = userInventory.Find(x => x.ItemId == key.CaseKeyId);
 
-            if (userCase == null || userCaseKey == null) return Forbid();
+            if (userCase == null) return Forbid();
             {
                 var caseItems = context.CaseItems.Where(x => x.Case == @case).ToArray();
                 // Egyenlőre Random.Shared-et használunk itt, de később valami százalékos esély algoritmust kell ide raknunk.
                 var resultItem = Random.Shared.GetItems(caseItems, 1)[0];
 
                 context.Userinventories.Remove(userCase);
-                context.Userinventories.Remove(userCaseKey);
                 context.Userinventories.Add(new Userinventory
                 {
                     InventoryId = userInventory.First().InventoryId,

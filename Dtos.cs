@@ -85,23 +85,22 @@ namespace csgo
             /// <summary>
             /// A tárgy leírása
             /// </summary>
-            [Required]
-            [JsonProperty("itemDescription")]
-            public string? ItemDescription { get; init; }
+            [Required][JsonProperty("itemDescription")] public string? ItemDescription { get; init; }
 
             /// <summary>
             /// A tárgy ritkasága
             /// </summary>
-            [Required]
-            [JsonProperty("itemRarity")]
-            public int ItemRarity { get; init; }
+            [Required][JsonProperty("itemRarity")] public int ItemRarity { get; init; }
 
             /// <summary>
             /// A tárgy skinének azonosítója
             /// </summary>
-            [Required]
-            [JsonProperty("itemSkinId")]
-            public int ItemSkin { get; init; }
+            [Required][JsonProperty("itemSkinId")] public int ItemSkin { get; init; }
+
+            /// <summary>
+            /// A tárgy képének URL-je
+            /// </summary>
+            [Required][JsonProperty("itemAssetUrl")] public string ItemAssetUrl { get; init; } = null!;
 
             /// <summary>
             /// Tárgy értéke

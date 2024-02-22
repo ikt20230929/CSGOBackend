@@ -53,11 +53,6 @@ public partial class CsgoContext : DbContext
     /// </summary>
     public virtual DbSet<CaseItem> CaseItems { get; set; } = null!;
 
-    /// <summary>
-    /// Az adatbázisban levö láda kulcsok listája
-    /// </summary>
-    public virtual DbSet<CaseKey> CaseKeys { get; set; } = null!;
-
     private static readonly int[] Value = [0, 0];
 
     /// <summary>
@@ -138,31 +133,6 @@ public partial class CsgoContext : DbContext
                 .HasConstraintName("case_items_ibfk_2");
         });
 
-        modelBuilder.Entity<CaseKey>(entity =>
-        {
-            entity.HasKey(cki => new { cki.CaseId, cki.CaseKeyId }).HasName("PRIMARY");
-
-            entity.ToTable("case_keys");
-
-            entity.Property(e => e.CaseId)
-                .HasColumnType("int(11)")
-                .HasColumnName("case_id");
-
-            entity.Property(e => e.CaseKeyId)
-                .HasColumnType("int(11)")
-                .HasColumnName("key_id");
-
-            entity.HasOne(ci => ci.Case)
-                .WithMany()
-                .HasForeignKey(ci => ci.CaseId)
-                .HasConstraintName("FK_case_keys_items");
-
-            entity.HasOne(ci => ci.Key)
-                .WithMany()
-                .HasForeignKey(ci => ci.CaseKeyId)
-                .HasConstraintName("FK_case_keys_items_2");
-        });
-
         modelBuilder.Entity<Item>(entity =>
         {
             entity.HasKey(e => e.ItemId).HasName("PRIMARY");
@@ -189,6 +159,9 @@ public partial class CsgoContext : DbContext
             entity.Property(e => e.ItemRarity)
                 .HasColumnType("int(11)")
                 .HasColumnName("rarity");
+            entity.Property(e => e.ItemAssetUrl)
+                .HasColumnType("varchar(255)")
+                .HasColumnName("asset_url");
             entity.Property(e => e.ItemSkinId)
                 .HasColumnType("int(11)")
                 .HasColumnName("skin_id");

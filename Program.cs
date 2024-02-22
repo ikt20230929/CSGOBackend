@@ -103,7 +103,10 @@ namespace csgo
             app.UseAuthentication();
             app.UseAuthorization();
             app.UseSwagger();
-            app.UseSwaggerUI();
+            app.UseSwaggerUI(c =>
+            {
+                c.ConfigObject.AdditionalItems.Add("persistAuthorization", "true");
+            });
             app.MapControllers();
             app.UseSession();
             app.UseHttpLogging();

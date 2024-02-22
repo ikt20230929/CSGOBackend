@@ -41,6 +41,11 @@ public class Item
     public decimal ItemValue { get; set; }
 
     /// <summary>
+    /// A tárgy kép URL-je
+    /// </summary>
+    public string ItemAssetUrl { get; set; } = null!;
+
+    /// <summary>
     /// Azon nyereményjátékok listája, amelyeken meg lehet nyerni ezt a tárgyat
     /// </summary>
     public virtual ICollection<Giveaway> Giveaways { get; set; } = new List<Giveaway>();
