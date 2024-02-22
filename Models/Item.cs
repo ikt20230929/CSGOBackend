@@ -43,7 +43,7 @@ public class Item
     /// <summary>
     /// A tárgy kép URL-je
     /// </summary>
-    public string ItemAssetUrl { get; set; } = null!;
+    public string? ItemAssetUrl { get; set; }
 
     /// <summary>
     /// Azon nyereményjátékok listája, amelyeken meg lehet nyerni ezt a tárgyat

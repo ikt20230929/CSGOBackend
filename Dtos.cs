@@ -100,7 +100,7 @@ namespace csgo
             /// <summary>
             /// A tárgy képének URL-je
             /// </summary>
-            [Required][JsonProperty("itemAssetUrl")] public string ItemAssetUrl { get; init; } = null!;
+            [Required][JsonProperty("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
 
             /// <summary>
             /// Tárgy értéke
@@ -143,6 +143,11 @@ namespace csgo
             /// A láda neve
             /// </summary>
             [Required][JsonProperty("caseName")] public string? ItemName { get; init; }
+
+            /// <summary>
+            /// A láda képének URL-je
+            /// </summary>
+            [Required][JsonProperty("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
 
             /// <summary>
             /// A láda elemeinek listája

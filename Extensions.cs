@@ -52,7 +52,8 @@ namespace csgo
             return new CaseResponse{
                 ItemId = @case.ItemId,
                 ItemName = @case.ItemName,
-                Items = items
+                Items = items,
+                ItemAssetUrl = @case.ItemAssetUrl
             };
         }
 
