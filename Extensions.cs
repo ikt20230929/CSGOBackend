@@ -1,4 +1,5 @@
 ﻿using csgo.Models;
+using static csgo.Dtos;
 namespace csgo
 {
     /// <summary>
@@ -11,9 +12,9 @@ namespace csgo
         /// </summary>
         /// <param name="skin">A Skin modell</param>
         /// <returns>Egy Skin DTO</returns>
-        public static Dtos.SkinResponse ToDto(this Skin skin)
+        public static SkinResponse ToDto(this Skin skin)
         {
-            return new Dtos.SkinResponse
+            return new SkinResponse
             {
                 SkinId = skin.SkinId,
                 SkinName = skin.SkinName,
@@ -26,9 +27,9 @@ namespace csgo
         /// </summary>
         /// <param name="item">A Tárgy modell</param>
         /// <returns>Egy Tárgy DTO</returns>
-        public static Dtos.ItemResponse ToDto(this Item item)
+        public static ItemResponse ToDto(this Item item)
         {
-          return new Dtos.ItemResponse
+          return new ItemResponse
           {
               ItemName = item.ItemName,
               ItemDescription = item.ItemDescription,
@@ -45,9 +46,9 @@ namespace csgo
         /// <param name="case">A Láda modell</param>
         /// <param name="items">A Ládahoz tartózó elemek listája</param>
         /// <returns>Egy Láda DTO</returns>
-        public static Dtos.CaseResponse ToCaseDto(this Item @case, List<Item> items)
+        public static CaseResponse ToCaseDto(this Item @case, List<ItemResponse> items)
         {
-            return new Dtos.CaseResponse{
+            return new CaseResponse{
                 ItemId = @case.ItemId,
                 ItemName = @case.ItemName,
                 Items = items
@@ -60,9 +61,9 @@ namespace csgo
         /// <param name="user">A Felhasználó modell</param>
         /// <param name="items">A felhsaználó leltárában lévő elemek listája</param>
         /// <returns>Egy Felhasználó DTO</returns>
-        public static Dtos.UserResponse ToDto(this User user, List<Item> items)
+        public static UserResponse ToDto(this User user, List<ItemResponse> items)
         {
-            return new Dtos.UserResponse {
+            return new UserResponse {
              Id = user.UserId,
              Balance = user.Balance,
              Email = user.Email,

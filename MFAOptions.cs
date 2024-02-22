@@ -1,4 +1,7 @@
-﻿namespace csgo
+﻿using System.ComponentModel.DataAnnotations;
+using Newtonsoft.Json;
+
+namespace csgo
 {
     /// <summary>
     /// Két faktoros belépés típusa
@@ -24,11 +27,13 @@
         /// <summary>
         /// TOTP jelszó
         /// </summary>
-        public string? TotpToken;
+        [Required][JsonProperty("totpToken")]
+        public string TotpToken { get; set; } = null!;
 
         /// <summary>
         /// Két faktoros belépés típusa
         /// </summary>
-        public MfaType MfaType;
+        [Required][JsonProperty("mfaType")]
+        public MfaType MfaType { get; set; }
     }
 }

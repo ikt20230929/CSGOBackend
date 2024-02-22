@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 
 namespace csgo
@@ -14,7 +15,7 @@ namespace csgo
         /// <param name="Username">A megadott felhasználónév</param>
         /// <param name="Password">A megadott jelszó</param>
         /// <param name="Mfa">A Kétfaktoros bejelentkezés részletei</param>
-        public record Login([Required] string Username, [Required] string Password, MfaOptions? Mfa);
+        public record LoginRequest([Required] string Username, [Required] string Password, [Optional] MfaOptions? Mfa);
 
         /// <summary>
         /// Regisztració kérelem
@@ -22,7 +23,7 @@ namespace csgo
         /// <param name="Username">A megadott Felhasználónév</param>
         /// <param name="Email">A megadott Email</param>
         /// <param name="Password">A megadott Jelszó</param>
-        public record Register([Required] string Username, [Required] string Email, [Required] string Password);
+        public record RegisterRequest([Required] string Username, [Required] string Email, [Required] string Password);
 
         /// <summary>
         /// Egy tárgy leírása.
@@ -32,7 +33,7 @@ namespace csgo
         /// <param name="Rarity">A tárgy ritkasága</param>
         /// <param name="SkinId">A tárgy skinének azonosítója</param>
         /// <param name="Value">A tárgy értéke</param>
-        public record Item(
+        public record ItemRecord(
             [Required] string Name,
             [Required] string Description,
             [Required] int Rarity,
@@ -44,13 +45,27 @@ namespace csgo
         /// </summary>
         /// <param name="Name">A skin neve</param>
         /// <param name="Value">A skin értéke</param>
-        public record Skin([Required] string Name, [Required] decimal Value);
+        public record SkinRecord([Required] string Name, [Required] decimal Value);
 
         /// <summary>
         /// Egy láda leírása
         /// </summary>
         /// <param name="Name">A láda neve</param>
-        public record Case([Required] string Name);
+        public record CaseRecord([Required] string Name);
+
+        /// <summary>
+        /// Egy állapot üzenet leírása
+        /// </summary>
+        public record ActionStatus {
+            /// <summary>
+            /// Állapot
+            /// </summary>
+            [Required][JsonProperty("status")] public string? Status { get; init; }
+            /// <summary>
+            /// Részletek
+            /// </summary>
+            [Required][JsonProperty("message")] public string? Message { get; init; }
+        }
 
         /// <summary>
         /// Egy tárgy leírása (API-kérés válasz)
@@ -133,7 +148,7 @@ namespace csgo
             /// <summary>
             /// A láda elemeinek listája
             /// </summary>
-            [Required][JsonProperty("items")] public List<Models.Item>? Items { get; init; }
+            [Required][JsonProperty("items")] public List<ItemResponse>? Items { get; init; }
         }
 
         /// <summary>
@@ -184,8 +199,22 @@ namespace csgo
             /// <summary>
             /// A felhasználó leltárában lévő elemek listája.
             /// </summary>
-            [Required][JsonProperty("userInventoryItems")] public List<Models.Item>? InventoryItems { get; init; }
+            [Required][JsonProperty("userInventoryItems")] public List<ItemResponse>? InventoryItems { get; init; }
         }
+
+        /// <summary>
+        /// Egy felhasználó profiljának leírása (API-kérés válasz)
+        /// </summary>
+        public record ProfileResponse {
+            /// <summary>
+            /// A felhasználó felhasználoneve
+            /// </summary>
+            [Required][JsonProperty("username")] public string? Username { get; init; }
+            /// <summary>
+            /// A felhasználó jelenlegi egyenlege
+            /// </summary>
+            [Required][JsonProperty("balance")] public double Balance { get; init; }
+        };
 
         /// <summary>
         /// Egy aktív nyereményjáték leírása (API-kerés válasz)

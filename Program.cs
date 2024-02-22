@@ -82,7 +82,7 @@ namespace csgo
                         Array.Empty<string>()
                     }
                 });
-
+                
                 var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 option.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
             });
