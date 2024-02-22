@@ -27,7 +27,7 @@
     }
 
     /// <summary>
-    /// JWT beá
+    /// JWT beállítások
     /// </summary>
     public class JwtSettings
     {

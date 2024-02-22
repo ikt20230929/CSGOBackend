@@ -35,12 +35,12 @@ namespace csgo.Controllers
             
             if (context.Users.Any(u => u.Username == register.Username))
             {
-                return BadRequest(new { status = "ERR", message = "A megadott felhaszn�l�n�v m�r foglalt." });
+                return BadRequest(new { status = "ERR", message = "A megadott felhasználónév már foglalt." });
             }
 
             if (context.Users.Any(u => u.Email == register.Email))
             {
-                return BadRequest(new { status = "ERR", message = "Az megadott e-mail m�r haszn�latban van." });
+                return BadRequest(new { status = "ERR", message = "Az megadott e-mail már használatban van." });
             }
 
             string hashedPassword = BCrypt.Net.BCrypt.HashPassword(register.Password);
@@ -48,7 +48,7 @@ namespace csgo.Controllers
             context.Users.Add(newUser);
             context.SaveChanges();
 
-            return Ok(new { status = "OK", message = "Sikeres regisztr�ci�!" });
+            return Ok(new { status = "OK", message = "Sikeres regisztráció!" });
         }
 
         [HttpGet]
