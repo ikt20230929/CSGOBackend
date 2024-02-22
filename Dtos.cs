@@ -101,11 +101,6 @@ namespace csgo
             /// A tárgy képének URL-je
             /// </summary>
             [Required][JsonProperty("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
-
-            /// <summary>
-            /// Tárgy értéke
-            /// </summary>
-            [Required][JsonProperty("itemValue")] public decimal ItemValue { get; init; }
         }
 
         /// <summary>
@@ -148,6 +143,11 @@ namespace csgo
             /// A láda képének URL-je
             /// </summary>
             [Required][JsonProperty("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
+
+            /// <summary>
+            /// A láda értéke.
+            /// </summary>
+            [Required][JsonProperty("itemValue")] public decimal ItemValue { get; init; }
 
             /// <summary>
             /// A láda elemeinek listája

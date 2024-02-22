@@ -36,7 +36,6 @@ namespace csgo
               ItemId = item.ItemId,
               ItemRarity = item.ItemRarity,
               ItemSkin = (int)item.ItemSkinId!,
-              ItemValue = item.ItemValue,
               ItemAssetUrl = item.ItemAssetUrl
           };
         }
@@ -53,7 +52,8 @@ namespace csgo
                 ItemId = @case.ItemId,
                 ItemName = @case.ItemName,
                 Items = items,
-                ItemAssetUrl = @case.ItemAssetUrl
+                ItemAssetUrl = @case.ItemAssetUrl,
+                ItemValue = @case.ItemValue
             };
         }
 

@@ -313,9 +313,9 @@ namespace csgo.Controllers
 
             Item item = new()
             {
+                ItemType = ItemType.Item,
                 ItemName = details.Name,
                 ItemDescription = details.Description,
-                ItemValue = details.Value,
                 ItemRarity = details.Rarity,
                 ItemSkinId = details.SkinId
             };
