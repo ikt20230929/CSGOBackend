@@ -635,6 +635,11 @@ namespace csgo.Controllers
         /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpDelete]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(CaseResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Route("admin/cases/{caseId:int}/items/{itemId:int}")]
         [Authorize]
         public ActionResult DeleteCaseItem(int caseId, int itemId)
@@ -656,6 +661,50 @@ namespace csgo.Controllers
             var caseItems = context.CaseItems.Where(x => x.Case == @case).Include(x => x.Item.Skin).Select(x => x.Item.ToDto()).ToList();
 
             return Ok(@case.ToCaseDto(caseItems));
+        }
+
+        /// <summary>
+        /// Új nyereményjáték létrehozása. (Admin jog szükséges)
+        /// </summary>
+        /// <param name="details">A nyereményjáték leírása.</param>
+        /// <returns>A nyereményjáték leírását.</returns>
+        /// <response code="200">Visszaadja a nyereményjáték leírását.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        /// <response code="404">A megadott tárgy nem található.</response>
+        [HttpPost]
+        [Route("admin/giveaways")]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(CurrentGiveawayResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [Authorize]
+        public ActionResult<CurrentGiveawayResponse> AddGiveaway(GiveawayRecord details) {
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            if (!user.IsAdmin) return Forbid();
+
+            var item = context.Items.Find(details.ItemId);
+            if (item == null) return NotFound();
+
+            var giveaway = new Giveaway{
+                ItemId = item.ItemId,
+                GiveawayDate = details.Date.ToLocalTime(),
+                GiveawayDescription = details.Description,
+                GiveawayName = details.Name,
+            };
+
+            context.Giveaways.Add(giveaway);
+            context.SaveChanges();
+
+            return Ok(new CurrentGiveawayResponse {
+                GiveawayDate = giveaway.GiveawayDate,
+                GiveawayDescription = giveaway.GiveawayDescription,
+                GiveawayId = giveaway.GiveawayId,
+                GiveawayItem = giveaway.Item!.ItemName,
+                GiveawayName = giveaway.GiveawayName
+            });
         }
 
         private static (string accessToken, string refreshToken) GenerateTokens(User user)

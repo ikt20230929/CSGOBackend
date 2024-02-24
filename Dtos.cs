@@ -55,6 +55,15 @@ namespace csgo
         public record CaseRecord([Required] string Name, [Required] decimal Value);
 
         /// <summary>
+        /// Egy nyereményjáték leírása
+        /// </summary>
+        /// <param name="Name">A nyereményjáték neve</param>
+        /// <param name="Description">A nyereményjáték leírása</param>
+        /// <param name="Date">A nyereményjáték kezdetének ideje</param>
+        /// <param name="ItemId">A nyereményjátékban nyerhető tárgy azonosítója</param>
+        public record GiveawayRecord([Required] string Name, [Required] string Description, [Required] DateTime Date, [Required] int ItemId);
+
+        /// <summary>
         /// Egy állapot üzenet leírása
         /// </summary>
         public record ActionStatus {
