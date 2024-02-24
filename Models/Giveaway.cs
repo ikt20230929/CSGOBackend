@@ -28,7 +28,7 @@ public class Giveaway
     /// <summary>
     /// A nyeremenyjáték sorsolásának ideje
     /// </summary>
-    public DateOnly GiveawayDate { get; set; }
+    public DateTime GiveawayDate { get; set; }
 
     /// <summary>
     /// A nyereményjátékban nyerhető tárgy azonosítója

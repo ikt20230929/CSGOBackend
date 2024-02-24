@@ -433,7 +433,6 @@ namespace csgo.Controllers
             if(@case == null) return NotFound();
 
             var userInventory = context.Userinventories.Where(x => x.UserId == user.UserId).Include(x => x.Item).ToList();
-
             var userCase = userInventory.Find(x => x.Item == @case);
 
             if (userCase == null) return Forbid();
@@ -445,7 +444,6 @@ namespace csgo.Controllers
                 context.Userinventories.Remove(userCase);
                 context.Userinventories.Add(new Userinventory
                 {
-                    InventoryId = userInventory.First().InventoryId,
                     ItemId = resultItem.ItemId,
                     ItemUpgradedAmount = 0,
                     UserId = user.UserId
@@ -455,6 +453,38 @@ namespace csgo.Controllers
                 return Ok(resultItem.Item.ToDto());
             }
 
+        }
+
+        /// <summary>
+        /// Csatlakozás egy jelenleg aktív nyereményjátékhoz.
+        /// </summary>
+        /// <param name="id">A csatlakozandó nyereményjáték azonosítója.</param>
+        /// <returns>204-es állapotkódot, ha a nyereményjátékhoz való csatlakozás sikeres volt, ha a felhasználó már csatlakozott, akkor a 409-es állapotkódot.</returns>
+        /// <response code="204">Sikeres csatlakozás.</response>
+        /// <response code="409">A nyereményjátékhoz már csatlakozott.</response>
+        /// <response code="404">A megadott nyereményjáték nem létezik.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpPost]
+        [Route("giveaways/{id:int}")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [Authorize]
+        public async Task<ActionResult> JoinGiveaway(int id)
+        {
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+
+            var giveaway = await context.Giveaways.Where(x => x.GiveawayDate > DateTime.Now && x.GiveawayId == id).Include(x => x.Users).FirstOrDefaultAsync();
+            if (giveaway == null) return NotFound();
+            if (giveaway.Users.Contains(user)) return Conflict();
+
+            giveaway.Users.Add(user);
+            context.SaveChanges();
+
+            return NoContent();
         }
 
         /// <summary>
@@ -473,7 +503,7 @@ namespace csgo.Controllers
         public async Task<ActionResult<List<CurrentGiveawayResponse>>> GetGiveaways()
         {
             // Nyereményjátékok, amelyek még nem futottak le.
-            var giveaways = await context.Giveaways.Where(x => x.GiveawayDate > DateOnly.FromDateTime(DateTime.Now)).Include(x => x.Item).ToListAsync();
+            var giveaways = await context.Giveaways.Where(x => x.GiveawayDate > DateTime.Now).Include(x => x.Item).ToListAsync();
 
             var mapped = giveaways.Select(giveaway => new CurrentGiveawayResponse
             {
@@ -504,7 +534,7 @@ namespace csgo.Controllers
         {
             // Nyereményjátékok amelyek már lefutottak, és van nyertesük.
             var giveaways = await context.Giveaways
-                .Where(x => x.GiveawayDate <= DateOnly.FromDateTime(DateTime.Now) && x.WinnerUserId != null)
+                .Where(x => x.GiveawayDate <= DateTime.Now && x.WinnerUserId != null)
                 .Include(x => x.Item).Include(giveaway => giveaway.WinnerUser).ToListAsync();
             
             var mapped = giveaways.Select(giveaway => new PastGiveawayResponse

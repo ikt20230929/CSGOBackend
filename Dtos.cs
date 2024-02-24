@@ -249,7 +249,7 @@ namespace csgo
             /// <summary>
             /// A nyereményjáték kezdetének ideje
             /// </summary>
-            [Required][JsonProperty("giveawayDate")] public DateOnly GiveawayDate { get; init; }
+            [Required][JsonProperty("giveawayDate")] public DateTime GiveawayDate { get; init; }
 
             /// <summary>
             /// A nyereményjátékban nyerhető tárgy azonosítója

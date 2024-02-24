@@ -1,10 +1,14 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Reflection;
+using System.Globalization;
+using csgo.Jobs;
 using csgo.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using Quartz;
+using System.IdentityModel.Tokens.Jwt;
+using System.Reflection;
+using Serilog;
 
 namespace csgo
 {
@@ -23,6 +27,7 @@ namespace csgo
             JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
             var builder = WebApplication.CreateBuilder(args);
             Globals.Config = builder.Configuration.GetSection("Settings").Get<Config>() ?? throw new Exception("Failed to load config, make sure appsettings.json exists.");
+            builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration));
             builder.Services.AddDbContext<CsgoContext>();
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
             {
@@ -86,9 +91,20 @@ namespace csgo
                 var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 option.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
             });
-            builder.Services.AddHttpLogging(o =>
+            builder.Services.AddQuartz(q =>
             {
-                o.LoggingFields = HttpLoggingFields.All;
+                var jobKey = new JobKey("GiveawayJob");
+
+                q.AddJob<GiveawayJob>(opts => opts.WithIdentity(jobKey));
+
+                q.AddTrigger(opts => opts
+                    .ForJob(jobKey)
+                    .WithIdentity("GiveawayJob-trigger")
+                    .WithCronSchedule("0 0/1 * * * ?"));
+            });
+            builder.Services.AddQuartzHostedService(options =>
+            {
+                options.WaitForJobsToComplete = true;
             });
             builder.Services.AddControllersWithViews().AddNewtonsoftJson();
 
@@ -99,6 +115,7 @@ namespace csgo
                 context.Database.EnsureCreated();
             }
             app.UseCors("API");
+            app.UseSerilogRequestLogging();
             app.UseHttpsRedirection();
             app.UseAuthentication();
             app.UseAuthorization();
@@ -109,9 +126,7 @@ namespace csgo
             });
             app.MapControllers();
             app.UseSession();
-            app.UseHttpLogging();
             app.Run();
         }
     }
 }
-
