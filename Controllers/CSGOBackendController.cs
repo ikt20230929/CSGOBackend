@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using csgo.Models;
 using Fido2NetLib;
+using KaimiraGames;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -20,6 +21,16 @@ namespace csgo.Controllers
     [Route("api")]
     public class CsgoBackendController(CsgoContext context) : ControllerBase
     {
+        private readonly Dictionary<ItemRarity, int> rarityWeights = new Dictionary<ItemRarity, int>
+        {
+            { ItemRarity.INDUSTRIAL_GRADE, 7992 },
+            { ItemRarity.MIL_SPEC, 7992 },
+            { ItemRarity.RESTRICTED, 1598 },
+            { ItemRarity.CLASSIFIED, 320 },
+            { ItemRarity.COVERT, 64 },
+            { ItemRarity.EXTRAORDINARY, 28 }
+        };
+
         /// <summary>
         /// Új felhasználó regisztrálása.
         /// </summary>
@@ -437,9 +448,16 @@ namespace csgo.Controllers
 
             if (userCase == null) return Forbid();
             {
-                var caseItems = context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).Include(z => z.Item.Skin).ToArray();
-                // Egyenlőre Random.Shared-et használunk itt, de később valami százalékos esély algoritmust kell ide raknunk.
-                var resultItem = Random.Shared.GetItems(caseItems, 1)[0];
+                var _caseItems = context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).Include(z => z.Item.Skin).ToArray();
+                var itemList = new List<WeightedListItem<Item>>();
+
+                foreach (var item in _caseItems)
+                {
+                    itemList.Add(new WeightedListItem<Item>(item.Item, rarityWeights[item.Item.ItemRarity]));
+                }
+
+                var caseItems = new WeightedList<Item>(itemList);
+                var resultItem = caseItems.Next();
 
                 context.Userinventories.Remove(userCase);
                 context.Userinventories.Add(new Userinventory
@@ -450,7 +468,7 @@ namespace csgo.Controllers
                 });
                 context.SaveChanges();
 
-                return Ok(resultItem.Item.ToDto());
+                return Ok(resultItem.ToDto());
             }
 
         }

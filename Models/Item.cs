@@ -28,7 +28,7 @@ public class Item
     /// <summary>
     /// A tárgy ritkasága
     /// </summary>
-    public int ItemRarity { get; set; }
+    public ItemRarity ItemRarity { get; set; }
 
     /// <summary>
     /// A tárgy skinének azonosítója

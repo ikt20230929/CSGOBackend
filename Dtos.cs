@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Runtime.InteropServices;
+using csgo.Models;
 using Newtonsoft.Json;
 
 namespace csgo
@@ -36,7 +37,7 @@ namespace csgo
         public record ItemRecord(
             [Required] string Name,
             [Required] string Description,
-            [Required] int Rarity,
+            [Required] ItemRarity Rarity,
             [Required] int SkinId,
             [Required] decimal Value);
 
@@ -100,7 +101,7 @@ namespace csgo
             /// <summary>
             /// A tárgy ritkasága
             /// </summary>
-            [Required][JsonProperty("itemRarity")] public int ItemRarity { get; init; }
+            [Required][JsonProperty("itemRarity")] public ItemRarity ItemRarity { get; init; }
 
             /// <summary>
             /// A tárgy skinének neve
