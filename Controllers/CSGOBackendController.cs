@@ -114,17 +114,17 @@ namespace csgo.Controllers
         /// <response code="200">Visszaadja A jelenleg bejelentkezett felhasználó leltárában lévő tárgyak listáját.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpGet]
-        [ProducesResponseType(typeof(List<ItemResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(List<InventoryItemResponse>), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Consumes("application/json")]
         [Produces("application/json")]
         [Route("inventory")]
         [Authorize]
-        public ActionResult<List<ItemResponse>> Inventory()
+        public ActionResult<List<InventoryItemResponse>> Inventory()
         {
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
 
-            List<ItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Include(y => y.Item.Skin).Select(x => x.Item.ToDto())];
+            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Include(y => y.Item.Skin).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
 
             return Ok(items);
         }

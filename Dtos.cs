@@ -297,5 +297,50 @@ namespace csgo
             /// </summary>
             [Required][JsonProperty("winnerName")] public string? WinnerName { get; init; }
         }
+
+        /// <summary>
+        /// Egy leltárban lévő tárgy leírása (API-kérés vélasz)
+        /// </summary>
+        public record InventoryItemResponse {
+            /// <summary>
+            /// A leltár azonosítója
+            /// </summary>
+            [Required][JsonProperty("inventoryId")] public int InventoryId { get; init; }
+
+                        /// <summary>
+            /// A tárgy azonosítója
+            /// </summary>
+            [Required][JsonProperty("itemId")] public int ItemId { get; init; }
+
+            /// <summary>
+            /// A tárgy neve
+            /// </summary>
+            [Required][JsonProperty("itemName")] public string? ItemName { get; init; }
+
+            /// <summary>
+            /// A tárgy leírása
+            /// </summary>
+            [Required][JsonProperty("itemDescription")] public string? ItemDescription { get; init; }
+
+            /// <summary>
+            /// A tárgy ritkasága
+            /// </summary>
+            [Required][JsonProperty("itemRarity")] public ItemRarity ItemRarity { get; init; }
+
+            /// <summary>
+            /// A tárgy skinének neve
+            /// </summary>
+            [Required][JsonProperty("itemSkinName")] public string ItemSkinName { get; init; } = null!;
+
+            /// <summary>
+            /// A tárgy skinének értéke
+            /// </summary>
+            [Required][JsonProperty("itemSkinValue")] public decimal ItemSkinValue { get; init; }
+
+            /// <summary>
+            /// A tárgy képének URL-je
+            /// </summary>
+            [Required][JsonProperty("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
+        }
     }
 }

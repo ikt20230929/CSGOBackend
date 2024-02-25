@@ -42,6 +42,23 @@ namespace csgo
         }
 
         /// <summary>
+        /// Tárgy modell konvertálása leltár tárgy DTO-ra
+        /// </summary>
+        public static InventoryItemResponse ToInventoryItemDto(this Item item, int inventoryId) {
+            return new InventoryItemResponse
+            {
+                InventoryId = inventoryId,
+                ItemName = item.ItemName,
+                ItemDescription = item.ItemDescription,
+                ItemId = item.ItemId,
+                ItemRarity = item.ItemRarity,
+                ItemSkinName = item.Skin!.SkinName,
+                ItemSkinValue = item.Skin!.SkinValue,
+                ItemAssetUrl = item.ItemAssetUrl
+            };
+        }
+
+        /// <summary>
         /// Láda modell konvertálása DTO-ra
         /// </summary>
         /// <param name="case">A Láda modell</param>
