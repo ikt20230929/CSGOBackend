@@ -31,11 +31,6 @@ public class Item
     public ItemRarity ItemRarity { get; set; }
 
     /// <summary>
-    /// A tárgy skinének azonosítója
-    /// </summary>
-    public int? ItemSkinId { get; set; }
-
-    /// <summary>
     /// A tárgy értéke
     /// </summary>
     public decimal? ItemValue { get; set; }
@@ -46,14 +41,14 @@ public class Item
     public string? ItemAssetUrl { get; set; }
 
     /// <summary>
+    /// A tárgy skinének neve
+    /// </summary>
+    public string? ItemSkinName { get; set; }
+
+    /// <summary>
     /// Azon nyereményjátékok listája, amelyeken meg lehet nyerni ezt a tárgyat
     /// </summary>
     public virtual ICollection<Giveaway> Giveaways { get; set; } = new List<Giveaway>();
-
-    /// <summary>
-    /// A tárgy skine
-    /// </summary>
-    public virtual Skin Skin { get; set; } = null!;
 
     /// <summary>
     /// Azon felhasználói leltárak, amelyek tartalmazzák ezt a tárgyat

@@ -34,11 +34,6 @@ public partial class CsgoContext : DbContext
     public virtual DbSet<Item> Items { get; set; } = null!;
 
     /// <summary>
-    /// Az adatbázisban lévő skinek listája
-    /// </summary>
-    public virtual DbSet<Skin> Skins { get; set; } = null!;
-
-    /// <summary>
     /// Az adatbázisban lévő felhasználók listája
     /// </summary>
     public virtual DbSet<User> Users { get; set; } = null!;
@@ -139,8 +134,6 @@ public partial class CsgoContext : DbContext
 
             entity.ToTable("items");
 
-            entity.HasIndex(e => e.ItemSkinId, "skin_id");
-
             entity.Property(e => e.ItemId)
                 .HasColumnType("int(11)")
                 .HasColumnName("item_id");
@@ -162,30 +155,9 @@ public partial class CsgoContext : DbContext
             entity.Property(e => e.ItemAssetUrl)
                 .HasColumnType("varchar(255)")
                 .HasColumnName("asset_url");
-            entity.Property(e => e.ItemSkinId)
-                .HasColumnType("int(11)")
-                .HasColumnName("skin_id");
-
-            entity.HasOne(d => d.Skin).WithMany(p => p.Items)
-                .HasForeignKey(d => d.ItemSkinId)
-                .HasConstraintName("items_ibfk_1");
-        });
-
-        modelBuilder.Entity<Skin>(entity =>
-        {
-            entity.HasKey(e => e.SkinId).HasName("PRIMARY");
-
-            entity.ToTable("skins");
-
-            entity.Property(e => e.SkinId)
-                .HasColumnType("int(11)")
-                .HasColumnName("skin_id");
-            entity.Property(e => e.SkinName)
-                .HasMaxLength(255)
+            entity.Property(e => e.ItemSkinName)
+                .HasColumnType("varchar(255)")
                 .HasColumnName("skin_name");
-            entity.Property(e => e.SkinValue)
-                .HasPrecision(10, 2)
-                .HasColumnName("skin_value");
         });
 
         modelBuilder.Entity<User>(entity =>

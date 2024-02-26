@@ -32,13 +32,13 @@ namespace csgo
         /// <param name="Name">A tárgy neve</param>
         /// <param name="Description">A tárgy leírása</param>
         /// <param name="Rarity">A tárgy ritkasága</param>
-        /// <param name="SkinId">A tárgy skinének azonosítója</param>
+        /// <param name="SkinName">A tárgy skinének neve</param>
         /// <param name="Value">A tárgy értéke</param>
         public record ItemRecord(
             [Required] string Name,
             [Required] string Description,
             [Required] ItemRarity Rarity,
-            [Required] int SkinId,
+            [Required] string SkinName,
             [Required] decimal Value);
 
         /// <summary>
@@ -109,35 +109,14 @@ namespace csgo
             [Required][JsonProperty("itemSkinName")] public string ItemSkinName { get; init; } = null!;
 
             /// <summary>
-            /// A tárgy skinének értéke
+            /// A tárgy értéke
             /// </summary>
-            [Required][JsonProperty("itemSkinValue")] public decimal ItemSkinValue { get; init; }
+            [Required][JsonProperty("itemValue")] public decimal ItemValue { get; init; }
 
             /// <summary>
             /// A tárgy képének URL-je
             /// </summary>
             [Required][JsonProperty("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
-        }
-
-        /// <summary>
-        /// Egy skin leírása (API-kérés válasz)
-        /// </summary>
-        public record SkinResponse
-        {
-            /// <summary>
-            /// A skin azonosítója
-            /// </summary>
-            [Required][JsonProperty("skinId")] public int SkinId { get; init; }
-
-            /// <summary>
-            /// A skin neve
-            /// </summary>
-            [Required][JsonProperty("skinName")] public string? SkinName { get; init; }
-
-            /// <summary>
-            /// A skin értéke
-            /// </summary>
-            [Required][JsonProperty("skinValue")] public decimal SkinValue { get; init; }
         }
 
         /// <summary>
@@ -307,7 +286,7 @@ namespace csgo
             /// </summary>
             [Required][JsonProperty("inventoryId")] public int InventoryId { get; init; }
 
-                        /// <summary>
+            /// <summary>
             /// A tárgy azonosítója
             /// </summary>
             [Required][JsonProperty("itemId")] public int ItemId { get; init; }
@@ -333,9 +312,9 @@ namespace csgo
             [Required][JsonProperty("itemSkinName")] public string ItemSkinName { get; init; } = null!;
 
             /// <summary>
-            /// A tárgy skinének értéke
+            /// A tárgy értéke
             /// </summary>
-            [Required][JsonProperty("itemSkinValue")] public decimal ItemSkinValue { get; init; }
+            [Required][JsonProperty("itemValue")] public decimal ItemValue { get; init; }
 
             /// <summary>
             /// A tárgy képének URL-je

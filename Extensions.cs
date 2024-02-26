@@ -8,21 +8,6 @@ namespace csgo
     public static class Extensions
     {
         /// <summary>
-        /// Skin modell konvertálása DTO-ra
-        /// </summary>
-        /// <param name="skin">A Skin modell</param>
-        /// <returns>Egy Skin DTO</returns>
-        public static SkinResponse ToDto(this Skin skin)
-        {
-            return new SkinResponse
-            {
-                SkinId = skin.SkinId,
-                SkinName = skin.SkinName,
-                SkinValue = skin.SkinValue
-            };
-        }
-
-        /// <summary>
         /// Tárgy modell konvertálása DTO-ra
         /// </summary>
         /// <param name="item">A Tárgy modell</param>
@@ -35,8 +20,8 @@ namespace csgo
               ItemDescription = item.ItemDescription,
               ItemId = item.ItemId,
               ItemRarity = item.ItemRarity,
-              ItemSkinName = item.Skin!.SkinName,
-              ItemSkinValue = item.Skin!.SkinValue,
+              ItemSkinName = item.ItemSkinName!,
+              ItemValue = (decimal)item.ItemValue!,
               ItemAssetUrl = item.ItemAssetUrl
           };
         }
@@ -52,8 +37,8 @@ namespace csgo
                 ItemDescription = item.ItemDescription,
                 ItemId = item.ItemId,
                 ItemRarity = item.ItemRarity,
-                ItemSkinName = item.Skin!.SkinName,
-                ItemSkinValue = item.Skin!.SkinValue,
+                ItemSkinName = item.ItemSkinName!,
+                ItemValue = (decimal)item.ItemValue!,
                 ItemAssetUrl = item.ItemAssetUrl
             };
         }

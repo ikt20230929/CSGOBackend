@@ -9,7 +9,6 @@ using Microsoft.EntityFrameworkCore;
 using OtpNet;
 using static csgo.Dtos;
 using Item = csgo.Models.Item;
-using Skin = csgo.Models.Skin;
 
 namespace csgo.Controllers
 {
@@ -124,7 +123,7 @@ namespace csgo.Controllers
         {
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
 
-            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Include(y => y.Item.Skin).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
+            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
 
             return Ok(items);
         }
@@ -272,7 +271,7 @@ namespace csgo.Controllers
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            return Ok(context.Items.Where(x => x.ItemType == ItemType.Item).Include(y => y.Skin).Select(x => x.ToDto()).ToList());
+            return Ok(context.Items.Where(x => x.ItemType == ItemType.Item).Select(x => x.ToDto()).ToList());
         }
 
         /// <summary>
@@ -297,7 +296,6 @@ namespace csgo.Controllers
 
             return Ok(context.Users.Select(x => x.ToDto(
                 context.Userinventories.Where(y => y.UserId == x.UserId)
-                    .Include(o => o.Item.Skin)
                     .Select(z => z.Item.ToDto()).ToList())).ToList());
         }
 
@@ -335,7 +333,7 @@ namespace csgo.Controllers
             });
             context.SaveChanges();
 
-            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Include(y => y.Item.Skin).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
+            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
             
             return Ok(items);
 
@@ -375,7 +373,7 @@ namespace csgo.Controllers
             context.Userinventories.Remove(userInventory);
             context.SaveChanges();
 
-            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Include(y => y.Item.Skin).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
+            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
             
             return Ok(items);
         }
@@ -408,69 +406,13 @@ namespace csgo.Controllers
                 ItemName = details.Name,
                 ItemDescription = details.Description,
                 ItemRarity = details.Rarity,
-                ItemSkinId = details.SkinId
+                ItemSkinName = details.SkinName,
+                ItemValue = details.Value
             };
             context.Items.Add(item);
             context.SaveChanges();
 
-            item.Skin = context.Skins.Find(item.ItemSkinId)!;
-
             return Ok(item.ToDto());
-        }
-
-        /// <summary>
-        /// Az összes létező skin adatainak lekérdezése. (Admin jog szükséges)
-        /// </summary>
-        /// <returns>Egy listát, ami tartalmazza az összes skin adatait.</returns>
-        /// <response code="200">Visszaad egy listát, ami tartalmazza az összes skin adatait.</response>
-        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
-        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
-        [HttpGet]
-        [Route("admin/skins")]
-        [ProducesResponseType(typeof(List<SkinResponse>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
-        [Consumes("application/json")]
-        [Produces("application/json")]
-        [Authorize]
-        public ActionResult<List<SkinResponse>> GetSkins()
-        {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
-            if (!user.IsAdmin) return Forbid();
-
-            return Ok(context.Skins.Select(x => x.ToDto()).ToList());
-        }
-
-        /// <summary>
-        /// Új skin létrehozása. (Admin jog szükséges)
-        /// </summary>
-        /// <param name="details">A skin leírása.</param>
-        /// <returns>A skin leírását.</returns>
-        /// <response code="200">Visszaadja a skin leírását.</response>
-        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
-        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
-        [HttpPost]
-        [Route("admin/skins")]
-        [ProducesResponseType(typeof(SkinResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
-        [Consumes("application/json")]
-        [Produces("application/json")]
-        [Authorize]
-        public ActionResult<SkinResponse> AddSkin(SkinRecord details)
-        {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
-            if (!user.IsAdmin) return Forbid();
-
-            Skin skin = new()
-            {
-                SkinName = details.Name,
-                SkinValue = details.Value
-            };
-            context.Skins.Add(skin);
-            context.SaveChanges();
-
-            return Ok(skin.ToDto());
         }
 
         /// <summary>
@@ -493,7 +435,6 @@ namespace csgo.Controllers
                 x => x.ToCaseDto(
                     context.CaseItems
                         .Where(y => y.CaseId == x.ItemId)
-                        .Include(y => y.Item.Skin)
                         .Select(z => z.Item).Select(z => z.ToDto()).ToList())).ToList());
         }
 
@@ -527,7 +468,7 @@ namespace csgo.Controllers
 
             if (userCase == null) return Forbid();
             {
-                var _caseItems = context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).Include(z => z.Item.Skin).ToArray();
+                var _caseItems = context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).ToArray();
                 var itemList = new List<WeightedListItem<Item>>();
 
                 foreach (var item in _caseItems)
@@ -673,7 +614,6 @@ namespace csgo.Controllers
                 ItemName = details.Name,
                 ItemType = ItemType.Case,
                 ItemValue = details.Value,
-                ItemSkinId = null
             };
             context.Items.Add(@case);
             context.SaveChanges();
@@ -718,7 +658,7 @@ namespace csgo.Controllers
             });
             context.SaveChanges();
             
-            var caseItems = context.CaseItems.Where(x => x.Case == @case).Include(x => x.Item.Skin).Select(x => x.Item.ToDto()).ToList();
+            var caseItems = context.CaseItems.Where(x => x.Case == @case).Select(x => x.Item.ToDto()).ToList();
 
             return Ok(@case.ToCaseDto(caseItems));
 
@@ -759,7 +699,7 @@ namespace csgo.Controllers
             context.CaseItems.Remove(caseItem);
             context.SaveChanges();
 
-            var caseItems = context.CaseItems.Where(x => x.Case == @case).Include(x => x.Item.Skin).Select(x => x.Item.ToDto()).ToList();
+            var caseItems = context.CaseItems.Where(x => x.Case == @case).Select(x => x.Item.ToDto()).ToList();
 
             return Ok(@case.ToCaseDto(caseItems));
         }
