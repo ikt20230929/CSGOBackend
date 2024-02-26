@@ -235,7 +235,7 @@ public partial class CsgoContext : DbContext
             entity.HasIndex(e => e.UserId, "user_id");
 
             entity.Property(e => e.InventoryId)
-                .ValueGeneratedNever()
+                .ValueGeneratedOnAdd()
                 .HasColumnType("int(11)")
                 .HasColumnName("inventory_id");
             entity.Property(e => e.ItemId)
