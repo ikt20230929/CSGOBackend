@@ -302,6 +302,85 @@ namespace csgo.Controllers
         }
 
         /// <summary>
+        /// Hozzáad egy tárgyat egy felhasználó leltárához. (Admin jog szükséges)
+        /// </summary>
+        /// <param name="userId">A felhasználó azonosítója.</param>
+        /// <param name="itemId">A hozzáadandó tárgy azonosítója.</param>
+        /// <returns>A felhasználó leltárának frissített adatait.</returns>
+        /// <response code="200">Visszaadja a felhasználó leltárának frissített adatait.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        /// <response code="404">A tárgy vagy a felhasználó nem található.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpPost]
+        [Route("admin/inventory/{userId:int}/items/{itemId:int}")]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(CaseResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Authorize]
+        public ActionResult AddInventoryItem(int userId, int itemId)
+        {
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            if (!user.IsAdmin) return Forbid();
+
+            var target = context.Users.FirstOrDefault(x => x.UserId == userId);
+            var item = context.Items.FirstOrDefault(x => x.ItemType == ItemType.Item && x.ItemId == itemId);
+            if (target == null || item == null) return NotFound();
+
+            context.Userinventories.Add(new Userinventory {
+                UserId = target.UserId,
+                ItemId = item.ItemId
+            });
+            context.SaveChanges();
+
+            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Include(y => y.Item.Skin).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
+            
+            return Ok(items);
+
+        }
+
+        /// <summary>
+        /// Eltávolít egy tárgyat egy felhasználó leltárából. (Admin jog szükséges)
+        /// </summary>
+        /// <param name="userId">A felhasználó azonosítója.</param>
+        /// <param name="itemId">A hozzáadandó tárgy azonosítója.</param>
+        /// <returns>A felhasználó leltárának frissített adatait.</returns>
+        /// <response code="200">Visszaadja a felhasználó leltárának frissített adatait.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        /// <response code="404">A tárgy vagy a felhasználó nem található, vagy a tárgy nincs a felhasználó leltárában.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpDelete]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(CaseResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Route("admin/inventory/{userId:int}/items/{itemId:int}")]
+        [Authorize]
+        public ActionResult DeleteInventoryItem(int userId, int itemId)
+        {
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            if (!user.IsAdmin) return Forbid();
+
+            var target = context.Users.FirstOrDefault(x => x.UserId == userId);
+            var item = context.Items.FirstOrDefault(x => x.ItemType == ItemType.Item && x.ItemId == itemId);
+            if (target == null || item == null) return NotFound();
+
+            var userInventory = context.Userinventories.FirstOrDefault(x => x.UserId == target.UserId && x.ItemId == item.ItemId);
+            if (userInventory == null) return NotFound();
+            
+            context.Userinventories.Remove(userInventory);
+            context.SaveChanges();
+
+            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Include(y => y.Item.Skin).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
+            
+            return Ok(items);
+        }
+
+        /// <summary>
         /// Új tárgy létrehozása. (Admin jog szükséges)
         /// </summary>
         /// <param name="details">A tárgy leírása.</param>
@@ -610,6 +689,7 @@ namespace csgo.Controllers
         /// <returns>A láda frissített adatait.</returns>
         /// <response code="200">Visszaadja a láda frissített adatait.</response>
         /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        /// <response code="404">A láda vagy tárgy nem található.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpPost]
         [Route("admin/cases/{caseId:int}/items/{itemId:int}")]
@@ -617,6 +697,7 @@ namespace csgo.Controllers
         [Produces("application/json")]
         [ProducesResponseType(typeof(CaseResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Authorize]
         public ActionResult AddCaseItem(int caseId, int itemId)
@@ -651,12 +732,14 @@ namespace csgo.Controllers
         /// <returns>A láda frissített adatait.</returns>
         /// <response code="200">Visszaadja a láda frissített adatait.</response>
         /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        /// <response code="404">A láda vagy tárgy nem található.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpDelete]
         [Consumes("application/json")]
         [Produces("application/json")]
         [ProducesResponseType(typeof(CaseResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Route("admin/cases/{caseId:int}/items/{itemId:int}")]
         [Authorize]

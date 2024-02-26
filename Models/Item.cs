@@ -38,7 +38,7 @@ public class Item
     /// <summary>
     /// A tárgy értéke
     /// </summary>
-    public decimal ItemValue { get; set; }
+    public decimal? ItemValue { get; set; }
 
     /// <summary>
     /// A tárgy kép URL-je

@@ -71,7 +71,7 @@ namespace csgo
                 ItemName = @case.ItemName,
                 Items = items,
                 ItemAssetUrl = @case.ItemAssetUrl,
-                ItemValue = @case.ItemValue
+                ItemValue = (decimal)@case.ItemValue!
             };
         }
 
