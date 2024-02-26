@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using csgo.Models;
 using Fido2NetLib;
 using KaimiraGames;
@@ -123,7 +124,7 @@ namespace csgo.Controllers
         {
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
 
-            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
+            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId, x.ItemUpgradedAmount))];
 
             return Ok(items);
         }
@@ -333,7 +334,7 @@ namespace csgo.Controllers
             });
             context.SaveChanges();
 
-            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
+            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId, x.ItemUpgradedAmount))];
             
             return Ok(items);
 
@@ -373,7 +374,7 @@ namespace csgo.Controllers
             context.Userinventories.Remove(userInventory);
             context.SaveChanges();
 
-            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
+            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId, x.ItemUpgradedAmount))];
             
             return Ok(items);
         }
@@ -490,7 +491,74 @@ namespace csgo.Controllers
 
                 return Ok(resultItem.ToDto());
             }
+        }
 
+        /// <summary>
+        /// Egy tárgy továbbfejlesztésének esélyének lekérdezése.
+        /// </summary>
+        /// <param name="id">A tárgy leltárazonosítója.</param>
+        /// <returns>Visszaadja a fejleszett tárgya továbbfejlesztésének esélyét.</returns>
+        /// <response code="200">Visszaadja a fejleszett órgya továbbfejlesztésének esélyét.</response>
+        /// <response code="404">Nem található a megadott tárgy.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpGet]
+        [Route("items/upgrade/{id:int}")]
+        [ProducesResponseType(typeof(ActionStatus), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        public ActionResult<ActionStatus> GetUpgradeChance(int id) {
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+
+            Userinventory inventoryItem = context.Userinventories.Include(x => x.Item).First(x => x.InventoryId == id && x.UserId == user.UserId);
+            if(inventoryItem == null) return NotFound();
+
+            InventoryItemResponse itemData = inventoryItem.Item.ToInventoryItemDto(inventoryItem.InventoryId, inventoryItem.ItemUpgradedAmount);
+
+            var chance = GetItemUpgradeSuccessChance(itemData);
+
+            return Ok(new ActionStatus { Status = "OK", Message = chance.ToString() });
+        }
+
+        /// <summary>
+        /// Egy tárgy továbbfejlesztése
+        /// </summary>
+        /// <param name="id">A tárgy leltárazonosítója.</param>
+        /// <returns>Visszaadja a fejleszett tárgya adatait ha sikerült, különben null.</returns>
+        /// <response code="200">Visszaadja a fejlesztett tárgy adatait ha sikerült, különben null.</response>
+        /// <response code="404">Nem találhato a megadott tárgy.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpPost]
+        [Route("items/upgrade/{id:int}")]
+        [ProducesResponseType(typeof(ItemUpgradeResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        public ActionResult<ItemUpgradeResponse> UpgradeItem(int id) {
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+
+            var inventoryItem = context.Userinventories.Include(x => x.Item).FirstOrDefault(x => x.InventoryId == id && x.UserId == user.UserId);
+            if(inventoryItem == null) return NotFound();
+
+            InventoryItemResponse itemData = inventoryItem.Item.ToInventoryItemDto(inventoryItem.InventoryId, inventoryItem.ItemUpgradedAmount);
+
+            var chance = GetItemUpgradeSuccessChance(itemData);
+
+            if(GetRandomDouble() < chance) {
+                inventoryItem.ItemUpgradedAmount++;
+                context.SaveChanges();
+                
+                return Ok(new ItemUpgradeResponse {
+                    Success = true,
+                    Item = inventoryItem.Item.ToDto()
+                });
+            } else {
+                context.Userinventories.Remove(inventoryItem);
+                context.SaveChanges();
+                
+                return Ok(new ItemUpgradeResponse {
+                    Success = false,
+                    Item = null
+                });
+            }
         }
 
         /// <summary>
@@ -794,5 +862,36 @@ namespace csgo.Controllers
             return Ok(new ActionStatus{ Status = "OK", Message = accessToken });
 
         }
+
+        private double GetItemUpgradeSuccessChance(InventoryItemResponse input)
+        {
+            var item = context.Items.Find(input.ItemId);
+
+            // Alap esély
+            double baseChance = 0.8;
+
+            // Ritkaság szerinti esély
+            double rarityMultiplier = 0.1 * (double)item!.ItemRarity;
+
+            // Eddigi fejlesztések szerinti esély
+            double upgradeMultiplier = 0.05 * input.ItemUpgradeCount;
+
+            double successChance = Math.Max(0, Math.Min(1, Math.Round(baseChance - rarityMultiplier - upgradeMultiplier, 2)));
+
+            return successChance;
+        }
+
+        
+        private static double GetRandomDouble()
+        {
+            byte[] bytes = new byte[8];
+            using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(bytes);
+            }
+
+            long longValue = BitConverter.ToInt64(bytes, 0);
+            return (double)longValue / long.MaxValue;
+    }
     }
 }

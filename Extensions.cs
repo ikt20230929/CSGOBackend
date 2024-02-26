@@ -25,11 +25,11 @@ namespace csgo
               ItemAssetUrl = item.ItemAssetUrl
           };
         }
-
+        
         /// <summary>
         /// Tárgy modell konvertálása leltár tárgy DTO-ra
         /// </summary>
-        public static InventoryItemResponse ToInventoryItemDto(this Item item, int inventoryId) {
+        public static InventoryItemResponse ToInventoryItemDto(this Item item, int inventoryId, int upgradeCount) {
             return new InventoryItemResponse
             {
                 InventoryId = inventoryId,
@@ -39,7 +39,8 @@ namespace csgo
                 ItemRarity = item.ItemRarity,
                 ItemSkinName = item.ItemSkinName!,
                 ItemValue = (decimal)item.ItemValue!,
-                ItemAssetUrl = item.ItemAssetUrl
+                ItemAssetUrl = item.ItemAssetUrl,
+                ItemUpgradeCount = upgradeCount
             };
         }
 

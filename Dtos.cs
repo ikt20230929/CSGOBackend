@@ -79,6 +79,21 @@ namespace csgo
         }
 
         /// <summary>
+        /// Egy tárgy fejlesztésének eredménye (API-kérés értesítése)
+        /// </summary>
+        public record ItemUpgradeResponse {
+            /// <summary>
+            /// A fejlesztés eredménye (sikerult-e)
+            /// </summary>
+            [Required][JsonProperty("success")] public bool Success { get; init; }
+
+            /// <summary>
+            /// A fejlesztett tárgy (null ha nem sikerült)
+            /// </summary>
+            [Required][JsonProperty("item")] public ItemResponse? Item { get; init; }
+        }
+
+        /// <summary>
         /// Egy tárgy leírása (API-kérés válasz)
         /// </summary>
         public record ItemResponse
@@ -320,6 +335,11 @@ namespace csgo
             /// A tárgy képének URL-je
             /// </summary>
             [Required][JsonProperty("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
+
+            /// <summary>
+            /// Felfejlesztések száma
+            /// </summary>
+            [Required][JsonProperty("itemUpgradeCount")] public int ItemUpgradeCount { get; init; }
         }
     }
 }

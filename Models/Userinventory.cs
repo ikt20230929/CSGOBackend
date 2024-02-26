@@ -23,7 +23,7 @@ public class Userinventory
     /// <summary>
     /// Annak a száma, hogy a tárgyat mennyiszer fejlesztették tovább
     /// </summary>
-    public int? ItemUpgradedAmount { get; set; }
+    public int ItemUpgradedAmount { get; set; }
 
     /// <summary>
     /// Egy leltárban lévő elem
