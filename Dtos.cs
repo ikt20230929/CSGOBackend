@@ -213,22 +213,8 @@ namespace csgo
             /// <summary>
             /// A felhasználó leltárában lévő elemek listája.
             /// </summary>
-            [Required][JsonProperty("userInventoryItems")] public List<ItemResponse>? InventoryItems { get; init; }
+            [Required][JsonProperty("userInventoryItems", DefaultValueHandling = DefaultValueHandling.Ignore)] public List<ItemResponse>? InventoryItems { get; init; }
         }
-
-        /// <summary>
-        /// Egy felhasználó profiljának leírása (API-kérés válasz)
-        /// </summary>
-        public record ProfileResponse {
-            /// <summary>
-            /// A felhasználó felhasználoneve
-            /// </summary>
-            [Required][JsonProperty("username")] public string? Username { get; init; }
-            /// <summary>
-            /// A felhasználó jelenlegi egyenlege
-            /// </summary>
-            [Required][JsonProperty("balance")] public double Balance { get; init; }
-        };
 
         /// <summary>
         /// Egy aktív nyereményjáték leírása (API-kerés válasz)

@@ -77,20 +77,17 @@ namespace csgo.Controllers
         /// <response code="200">Visszaadja a jelenleg bejelentkezett felhasználónevét, és a jelenlegi egyenlegét.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpGet]
-        [ProducesResponseType(typeof(ProfileResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Consumes("application/json")]
         [Produces("application/json")]
         [Route("profile")]
         [Authorize]
-        public ActionResult<ProfileResponse> Profile()
+        public ActionResult<UserResponse> Profile()
         {
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
 
-            return Ok(new ProfileResponse { 
-                Username = user.Username,
-                Balance = user.Balance
-            });
+            return Ok(user.ToDto(null!));
         }
 
         /// <summary>
