@@ -229,6 +229,64 @@ namespace csgo.Controllers
         }
 
         /// <summary>
+        /// TOTP kulcs generálása
+        /// </summary>
+        /// <returns>Egy TOTP kulcsot</returns>
+        /// <response code="200">Visszaad egy TOTP kulcsot</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        /// <response code="409">A TOTP kulcs generálása nem történt meg, mivel a felhasználó már engedélyezte a TOTP alapú 2FA-t</response>
+        [HttpGet]
+        [Route("totp")]
+        [ProducesResponseType(typeof(ActionStatus), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
+        [Produces("application/json")]
+        [Authorize]
+        public ActionResult<ActionStatus> GenerateTotpToken() {
+            var user = context.Users.First(x => x.Username == User.Identity!.Name);
+            if(user.TotpEnabled) return Conflict();
+
+            user.TotpSecret = Base32Encoding.ToString(KeyGeneration.GenerateRandomKey(20));
+            context.SaveChanges();
+
+            return Ok(new ActionStatus { Status = "OK", Message = user.TotpSecret });
+        }
+
+        /// <summary>
+        /// TOTP kulcs ellenőrzeése
+        /// </summary>
+        /// <param name="request">A TOTP kulcs</param>
+        /// <returns>204 ha sikerült, 403 ha nem.</returns>
+        /// <response code="204">A TOTP kulcs ellenőrzés sikeres volt.</response>
+        /// <response code="403">A TOTP kulcs ellenőrzés sikertelen volt.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        /// <response code="409">Ez a végpont csak a 2FA beállítása közben használható.</response>
+        [HttpPost]
+        [Route("totp")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
+        [Produces("application/json")]
+        [Consumes("application/json")]
+        [Authorize]
+        public ActionResult<ActionStatus> CheckTotpToken(TOTPRequest request) {
+            var user = context.Users.First(x => x.Username == User.Identity!.Name);
+            if(user.TotpEnabled) return Conflict();
+
+            var totp = new Totp(Base32Encoding.ToBytes(user.TotpSecret));
+            bool verify = totp.VerifyTotp(request.Code, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
+
+            if(verify) {
+                user.TotpEnabled = true;
+                context.SaveChanges();
+                return NoContent();
+            }else{
+                return Forbid();
+            }
+        }
+
+        /// <summary>
         /// A jelenleg bejelentkezett felhasználó admin jogainak ellenőrzése.
         /// </summary>
         /// <returns>204-es állapotkódot ha a jelenleg bejelentkezett felhasználó rendelkezik admin jogokkal, különben 403-as állapotkódot.</returns>

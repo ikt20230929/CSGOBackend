@@ -65,6 +65,16 @@ namespace csgo
         public record GiveawayRecord([Required] string Name, [Required] string Description, [Required] DateTime Date, [Required] int ItemId);
 
         /// <summary>
+        /// Egy TOTP kód leírása
+        /// </summary>
+        public record TOTPRequest{
+            /// <summary>
+            /// A kód
+            /// </summary>
+            [Required][JsonProperty("code")] public string Code { get; init; } = null!;
+        };
+
+        /// <summary>
         /// Egy állapot üzenet leírása
         /// </summary>
         public record ActionStatus {
