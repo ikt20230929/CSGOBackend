@@ -380,7 +380,7 @@ namespace csgo.Controllers
             if (!user.IsAdmin) return Forbid();
 
             var target = context.Users.FirstOrDefault(x => x.UserId == userId);
-            var item = context.Items.FirstOrDefault(x => x.ItemType == ItemType.Item && x.ItemId == itemId);
+            var item = context.Items.FirstOrDefault(x => x.ItemId == itemId);
             if (target == null || item == null) return NotFound();
 
             context.Userinventories.Add(new Userinventory {
@@ -420,7 +420,7 @@ namespace csgo.Controllers
             if (!user.IsAdmin) return Forbid();
 
             var target = context.Users.FirstOrDefault(x => x.UserId == userId);
-            var item = context.Items.FirstOrDefault(x => x.ItemType == ItemType.Item && x.ItemId == itemId);
+            var item = context.Items.FirstOrDefault(x => x.ItemId == itemId);
             if (target == null || item == null) return NotFound();
 
             var userInventory = context.Userinventories.FirstOrDefault(x => x.UserId == target.UserId && x.ItemId == item.ItemId);
@@ -527,9 +527,18 @@ namespace csgo.Controllers
                 var _caseItems = context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).ToArray();
                 var itemList = new List<WeightedListItem<Item>>();
 
+                var weights = new Dictionary<Item, double>();
                 foreach (var item in _caseItems)
                 {
-                    itemList.Add(new WeightedListItem<Item>(item.Item, rarityWeights[item.Item.ItemRarity]));
+                    double rarityWeight = rarityWeights[item.Item.ItemRarity];
+                    double valueWeight = (double)item.Item.ItemValue! / (double)@case.ItemValue!;
+                    double totalWeight = rarityWeight * valueWeight;
+                    weights[item.Item] = totalWeight;
+                }
+
+                foreach (var item in _caseItems)
+                {
+                    itemList.Add(new WeightedListItem<Item>(item.Item, (int)weights[item.Item]));
                 }
 
                 var caseItems = new WeightedList<Item>(itemList);
