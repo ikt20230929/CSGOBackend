@@ -270,7 +270,7 @@ namespace csgo.Controllers
         [Produces("application/json")]
         [Consumes("application/json")]
         [Authorize]
-        public ActionResult<ActionStatus> CheckTotpToken(TOTPRequest request) {
+        public ActionResult<ActionStatus> CheckTotpToken(EnableTOTPRequest request) {
             var user = context.Users.First(x => x.Username == User.Identity!.Name);
             if(user.TotpEnabled) return Conflict();
 
@@ -279,6 +279,42 @@ namespace csgo.Controllers
 
             if(verify) {
                 user.TotpEnabled = true;
+                context.SaveChanges();
+                return NoContent();
+            }else{
+                return Forbid();
+            }
+        }
+
+        /// <summary>
+        /// TOTP kikapcsolása
+        /// </summary>
+        /// <returns>204 ha sikerült, 403 ha nem.</returns>
+        /// <response code="204">A TOTP kikapcsolása sikeres volt.</response>
+        /// <response code="403">Érvénytelen TOTP azonosító vagy jelszó.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        /// <response code="409">A felhasználónak nincs bekapcsolva a TOTP.</response>
+        /// <param name="request">TOTP kód, jelszó</param>
+        [HttpDelete]
+        [Route("totp")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [Authorize]
+        public ActionResult<ActionStatus> DisableTotp(DisableTOTPRequest request) {
+            var user = context.Users.First(x => x.Username == User.Identity!.Name);
+            if(!user.TotpEnabled) return Conflict();
+
+            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash)) return Forbid();
+
+            var totp = new Totp(Base32Encoding.ToBytes(user.TotpSecret));
+            bool verify = totp.VerifyTotp(request.Code, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
+
+            if(verify) {
+                user.TotpEnabled = false;
                 context.SaveChanges();
                 return NoContent();
             }else{
@@ -570,6 +606,7 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(ActionStatus), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Authorize]
         public ActionResult<ActionStatus> GetUpgradeChance(int id) {
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
 
@@ -596,6 +633,7 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(ItemUpgradeResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Authorize]
         public ActionResult<ItemUpgradeResponse> UpgradeItem(int id) {
             User user = context.Users.First(x => x.Username == User.Identity!.Name);
 

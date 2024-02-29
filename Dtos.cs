@@ -27,6 +27,19 @@ namespace csgo
         public record RegisterRequest([Required] string Username, [Required] string Email, [Required] string Password);
 
         /// <summary>
+        /// TOTP kikapcsolási kérelem
+        /// </summary>
+        /// <param name="Code">A felhasználótól kért jelenlegi TOTP kód</param>
+        /// <param name="Password">A felhasználó jelenlegi jelszava</param>
+        public record DisableTOTPRequest([Required] string Code, [Required] string Password);
+
+        /// <summary>
+        /// TOTP bekapcsolási kérelem
+        /// </summary>
+        /// <param name="Code">A felhasználótól kért jelenlegi TOTP kód</param>
+        public record EnableTOTPRequest([Required] string Code);
+
+        /// <summary>
         /// Egy tárgy leírása.
         /// </summary>
         /// <param name="Name">A tárgy neve</param>
@@ -63,17 +76,7 @@ namespace csgo
         /// <param name="Date">A nyereményjáték kezdetének ideje</param>
         /// <param name="ItemId">A nyereményjátékban nyerhető tárgy azonosítója</param>
         public record GiveawayRecord([Required] string Name, [Required] string Description, [Required] DateTime Date, [Required] int ItemId);
-
-        /// <summary>
-        /// Egy TOTP kód leírása
-        /// </summary>
-        public record TOTPRequest{
-            /// <summary>
-            /// A kód
-            /// </summary>
-            [Required][JsonProperty("code")] public string Code { get; init; } = null!;
-        };
-
+        
         /// <summary>
         /// Egy állapot üzenet leírása
         /// </summary>
