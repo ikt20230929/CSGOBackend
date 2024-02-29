@@ -31,7 +31,6 @@ namespace csgo.Jobs
                 dbContext.Userinventories.Add(new Userinventory
                 {
                     ItemId = giveaway.ItemId,
-                    ItemUpgradedAmount = 0,
                     UserId = winner.UserId
                 });
 

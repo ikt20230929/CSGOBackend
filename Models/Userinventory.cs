@@ -21,11 +21,6 @@ public class Userinventory
     public int? ItemId { get; set; }
 
     /// <summary>
-    /// Annak a száma, hogy a tárgyat mennyiszer fejlesztették tovább
-    /// </summary>
-    public int ItemUpgradedAmount { get; set; }
-
-    /// <summary>
     /// Egy leltárban lévő elem
     /// </summary>
     public virtual Item Item { get; set; } = null!;

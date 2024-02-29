@@ -29,7 +29,7 @@ namespace csgo
         /// <summary>
         /// Tárgy modell konvertálása leltár tárgy DTO-ra
         /// </summary>
-        public static InventoryItemResponse ToInventoryItemDto(this Item item, int inventoryId, int upgradeCount) {
+        public static InventoryItemResponse ToInventoryItemDto(this Item item, int inventoryId) {
             return new InventoryItemResponse
             {
                 InventoryId = inventoryId,
@@ -39,8 +39,7 @@ namespace csgo
                 ItemRarity = item.ItemRarity,
                 ItemSkinName = item.ItemSkinName!,
                 ItemValue = (decimal)item.ItemValue!,
-                ItemAssetUrl = item.ItemAssetUrl,
-                ItemUpgradeCount = upgradeCount
+                ItemAssetUrl = item.ItemAssetUrl
             };
         }
 

@@ -334,11 +334,6 @@ namespace csgo
             /// A tárgy képének URL-je
             /// </summary>
             [Required][JsonProperty("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
-
-            /// <summary>
-            /// Felfejlesztések száma
-            /// </summary>
-            [Required][JsonProperty("itemUpgradeCount")] public int ItemUpgradeCount { get; init; }
         }
     }
 }

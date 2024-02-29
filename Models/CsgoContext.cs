@@ -241,10 +241,6 @@ public partial class CsgoContext : DbContext
             entity.Property(e => e.ItemId)
                 .HasColumnType("int(11)")
                 .HasColumnName("item_id");
-            entity.Property(e => e.ItemUpgradedAmount)
-                .HasColumnType("int(11)")
-                .HasColumnName("item_upgraded_amount")
-                .HasDefaultValueSql("'0'");
             entity.Property(e => e.UserId)
                 .HasColumnType("int(11)")
                 .HasColumnName("user_id");
