@@ -107,7 +107,14 @@ namespace csgo
             {
                 options.WaitForJobsToComplete = true;
             });
-            builder.Services.AddControllersWithViews().AddNewtonsoftJson();
+            builder.Services.AddControllersWithViews();
+            builder.Services.AddFido2(options =>
+            {
+                options.ServerDomain = new Uri(Globals.Config.BackUrl).Host;
+                options.ServerName = "CSGO";
+                options.Origins = new HashSet<string>([Globals.Config.FrontUrl]);
+                options.TimestampDriftTolerance = 300000;
+            });
 
             var app = builder.Build();
             using (var serviceScope = app.Services.CreateScope())

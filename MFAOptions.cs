@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
-using Newtonsoft.Json;
+using System.Text.Json.Serialization;
+using Fido2NetLib;
 
 namespace csgo
 {
@@ -14,9 +15,14 @@ namespace csgo
         Totp = 1,
 
         /// <summary>
-        /// WebAuthn
+        /// WebAuthn (első lpéés)
         /// </summary>
-        WebAuthn = 2
+        WebAuthnOptions = 2,
+
+        /// <summary>
+        /// WebAuthn (második lépés)
+        /// </summary>
+        WebAuthnAssertion = 3
     }
 
     /// <summary>
@@ -27,13 +33,19 @@ namespace csgo
         /// <summary>
         /// TOTP jelszó
         /// </summary>
-        [Required][JsonProperty("totpToken")]
+        [JsonPropertyName("totpToken")]
         public string? TotpToken { get; set; }
+
+        /// <summary>
+        /// WebAuthn attesztáció válasz
+        /// </summary>
+        [JsonPropertyName("webAuthnAssertionResponse")]
+        public AuthenticatorAssertionRawResponse? WebAuthnAssertationResponse { get; set; }
 
         /// <summary>
         /// Két faktoros belépés típusa
         /// </summary>
-        [Required][JsonProperty("mfaType")]
+        [Required][JsonPropertyName("mfaType")]
         public MfaType MfaType { get; set; }
     }
 }

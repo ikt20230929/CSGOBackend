@@ -41,7 +41,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OU
 IN THE SOFTWARE.
 
 ===
-Fido2 (https://github.com/passwordless-lib/fido2-net-lib)
+Fido2.AspNet (https://github.com/passwordless-lib/fido2-net-lib)
 ===
 
 MIT License

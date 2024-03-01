@@ -1,8 +1,11 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
 using csgo.Models;
 using Fido2NetLib;
+using Fido2NetLib.Objects;
 using KaimiraGames;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -17,11 +20,12 @@ namespace csgo.Controllers
     /// Backend végpontok.
     /// </summary>
     /// <param name="context">Adatbázis kontextus.</param>
+    /// <param name="fido2">Fido2 szolgáltatás.</param>
     [ApiController]
     [Route("api")]
-    public class CsgoBackendController(CsgoContext context) : ControllerBase
+    public class CsgoBackendController(CsgoContext context, IFido2 fido2) : ControllerBase
     {
-        private readonly Dictionary<ItemRarity, int> rarityWeights = new Dictionary<ItemRarity, int>
+        private readonly Dictionary<ItemRarity, int> rarityWeights = new()
         {
             { ItemRarity.INDUSTRIAL_GRADE, 7992 },
             { ItemRarity.MIL_SPEC, 7992 },
@@ -171,7 +175,7 @@ namespace csgo.Controllers
         [Consumes("application/json")]
         [Produces("application/json")]
         [Route("login")]
-        public ActionResult<ActionStatus> LoginUser(LoginRequest login)
+        public async Task<ActionResult<ActionStatus>> LoginUser(LoginRequest login)
         {
             var storedUser = context.Users.FirstOrDefault(u => u.Username == login.Username);
 
@@ -208,24 +212,151 @@ namespace csgo.Controllers
                         VerificationWindow.RfcSpecifiedNetworkDelay);
                     return verify ? CheckPassword(login.Password, storedUser) : BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidTotp" });
                 }
-                case MfaType.WebAuthn:
+                case MfaType.WebAuthnOptions:
                 {
+                    if (!storedUser.WebauthnEnabled) return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidMFAMethod" });                 
+                    if (storedUser.WebauthnCredentialId == null || storedUser.WebauthnPublicKey == null) return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidWebAuthn" });
+
+                    var credential = JsonSerializer.Deserialize<StoredCredential>(storedUser.WebauthnPublicKey);
+
+                    if (credential == null) return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidWebAuthn" });
+
+                    var options = fido2.GetAssertionOptions([credential.Descriptor], UserVerificationRequirement.Discouraged);
+
+                    HttpContext.Session.SetString("fido2.assertionOptions", options.ToJson());
+
+                    return Unauthorized(new ActionStatus{ Status = "UI", Message = options.ToJson() });
+                }
+                case MfaType.WebAuthnAssertion: {
                     if (!storedUser.WebauthnEnabled) return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidMFAMethod" });
-                    // ReSharper disable once UnusedVariable
-                    Fido2 fido2 = new(new Fido2Configuration
+                    if (storedUser.WebauthnCredentialId == null || storedUser.WebauthnPublicKey == null || login.Mfa.WebAuthnAssertationResponse == null) return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidWebAuthn" });
+
+                    var jsonOptions = HttpContext.Session.GetString("fido2.assertionOptions");
+                    var options = AssertionOptions.FromJson(jsonOptions);
+                    var credential = JsonSerializer.Deserialize<StoredCredential>(storedUser.WebauthnPublicKey);
+
+                    if (credential == null) return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidWebAuthn" });
+
+                    var result = await fido2.MakeAssertionAsync(
+                        login.Mfa.WebAuthnAssertationResponse, 
+                        options, 
+                        credential.PublicKey,
+                        credential.DevicePublicKeys,
+                        credential.SignCount,
+                        IsUserHandleOwnerOfCredentialId,
+                        CancellationToken.None);
+
+                    if (result.Status != "ok") return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidWebAuthn" });
+
+                    var storedCredential = new StoredCredential
                     {
-                        ServerDomain = new Uri(Globals.Config.BackUrl).Host,
-                        ServerName = "CSGOBackend",
-                        Origins = { Globals.Config.BackUrl }
-                    });
-                    //TODO
-                    return Ok();
+                        DevicePublicKeys = credential.DevicePublicKeys,
+                        Id = result.CredentialId,
+                        Descriptor = new PublicKeyCredentialDescriptor(result.CredentialId),
+                        PublicKey = credential.PublicKey,
+                        UserHandle = credential.UserHandle,
+                        SignCount = result.SignCount,
+                        RegDate = credential.RegDate,
+                        AaGuid = credential.AaGuid
+                    };
+
+                    storedUser.WebauthnPublicKey = JsonSerializer.Serialize(storedCredential);
+                    await context.SaveChangesAsync();
+
+                    return CheckPassword(login.Password, storedUser);
                 }
                 default:
                 {
                     return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidCredential" });
                 }
             }
+        }
+
+        private async Task<bool> IsUserHandleOwnerOfCredentialId(IsUserHandleOwnerOfCredentialIdParams arg, CancellationToken cancellationToken)
+        {
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name, cancellationToken: cancellationToken);
+
+            if (user.WebauthnPublicKey == null) return false;
+
+            var credential = JsonSerializer.Deserialize<StoredCredential>(user.WebauthnPublicKey);
+
+            return credential?.UserHandle.SequenceEqual(arg.UserHandle) ?? false;
+        }
+
+        /// <summary>
+        /// WebAuthn attesztáció (1. lépés).
+        /// </summary>
+        [HttpGet]
+        [Authorize]
+        [Route("webauthn")]
+        public async Task<ActionResult> WebAuthnAttestation()
+        {
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            var fidoUser = new Fido2User
+            {
+                DisplayName = user.Username,
+                Name = user.Username,
+                Id = Encoding.UTF8.GetBytes(user.UserId.ToString())
+            };
+
+            var options = fido2.RequestNewCredential(fidoUser, [], new AuthenticatorSelection {
+                ResidentKey = ResidentKeyRequirement.Preferred,
+                UserVerification = UserVerificationRequirement.Preferred
+            }, AttestationConveyancePreference.None, new AuthenticationExtensionsClientInputs{
+                CredProps = true
+            });
+
+            HttpContext.Session.SetString("fido2.attestationOptions", options.ToJson());
+
+            return Ok(options);
+        }
+
+        /// <summary>
+        /// WebAuthn attesztáció (2. lépés).
+        /// </summary>
+        /// <param name="attestationResponse">A WebAuthn attesztáció válasza.</param>
+        [HttpPost]
+        [Authorize]
+        [Route("webauthn")]
+        public async Task<ActionResult> WebAuthnAttestation([FromBody] AuthenticatorAttestationRawResponse attestationResponse)
+        {
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            try{
+                var jsonOptions = HttpContext.Session.GetString("fido2.attestationOptions");
+                if (jsonOptions == null) return NotFound();
+                var options = CredentialCreateOptions.FromJson(jsonOptions);
+
+                var fidoCredentials = await fido2.MakeNewCredentialAsync(attestationResponse, options, IsCredentialIdUniqueToUser, CancellationToken.None);
+
+                if(fidoCredentials.Result == null || fidoCredentials.Status != "ok") return BadRequest();
+
+                var storedCredential = new StoredCredential
+                {
+                    Id = fidoCredentials.Result.Id,
+                    Descriptor = new PublicKeyCredentialDescriptor(fidoCredentials.Result.Id),
+                    PublicKey = fidoCredentials.Result.PublicKey,
+                    UserHandle = fidoCredentials.Result.User.Id,
+                    SignCount = fidoCredentials.Result.SignCount,
+                    RegDate = DateTime.Now,
+                    AaGuid = fidoCredentials.Result.AaGuid
+                };
+
+                user.WebauthnCredentialId = Convert.ToBase64String(fidoCredentials.Result.Id);
+                user.WebauthnPublicKey = JsonSerializer.Serialize(storedCredential);
+                user.WebauthnEnabled = true;
+
+                await context.SaveChangesAsync();
+
+                return Ok();
+            }catch(Exception e)
+            {
+                return BadRequest(new MakeNewCredentialResult("error", e.Message, null));
+            }
+        }
+
+        private async Task<bool> IsCredentialIdUniqueToUser(IsCredentialIdUniqueToUserParams credentialIdUserParams, CancellationToken cancellationToken)
+        {
+            return !await context.Users.AnyAsync(x => x.WebauthnCredentialId == Convert.ToBase64String(credentialIdUserParams.CredentialId), cancellationToken: cancellationToken);
         }
 
         /// <summary>
@@ -550,7 +681,7 @@ namespace csgo.Controllers
         [Authorize]
         public ActionResult<ItemResponse> OpenCase(int caseId)
         {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            var user = context.Users.First(x => x.Username == User.Identity!.Name);
 
             var @case = context.Items.FirstOrDefault(x => x.ItemType == ItemType.Case && x.ItemId == caseId);
             if(@case == null) return NotFound();
@@ -560,22 +691,18 @@ namespace csgo.Controllers
 
             if (userCase == null) return Forbid();
             {
-                var _caseItems = context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).ToArray();
-                var itemList = new List<WeightedListItem<Item>>();
+                var ctxCaseItems = context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).ToArray();
 
                 var weights = new Dictionary<Item, double>();
-                foreach (var item in _caseItems)
+                foreach (var item in ctxCaseItems)
                 {
                     double rarityWeight = rarityWeights[item.Item.ItemRarity];
-                    double valueWeight = (double)item.Item.ItemValue! / (double)@case.ItemValue!;
-                    double totalWeight = rarityWeight * valueWeight;
+                    var valueWeight = (double)item.Item.ItemValue! / (double)@case.ItemValue!;
+                    var totalWeight = rarityWeight * valueWeight;
                     weights[item.Item] = totalWeight;
                 }
 
-                foreach (var item in _caseItems)
-                {
-                    itemList.Add(new WeightedListItem<Item>(item.Item, (int)weights[item.Item]));
-                }
+                var itemList = ctxCaseItems.Select(item => new WeightedListItem<Item>(item.Item, (int)weights[item.Item])).ToList();
 
                 var caseItems = new WeightedList<Item>(itemList);
                 var resultItem = caseItems.Next();
@@ -705,7 +832,7 @@ namespace csgo.Controllers
             if (giveaway.Users.Contains(user)) return Conflict();
 
             giveaway.Users.Add(user);
-            context.SaveChanges();
+            await context.SaveChangesAsync();
 
             return NoContent();
         }

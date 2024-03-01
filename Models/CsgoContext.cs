@@ -194,7 +194,7 @@ public partial class CsgoContext : DbContext
                 .HasColumnName("webauthn_credential_id");
             entity.Property(e => e.WebauthnEnabled).HasColumnName("webauthn_enabled");
             entity.Property(e => e.WebauthnPublicKey)
-                .HasMaxLength(255)
+                .HasColumnType("text")
                 .HasColumnName("webauthn_public_key");
 
             entity.HasMany(d => d.GiveawaysNavigation).WithMany(p => p.Users)

@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Runtime.InteropServices;
+using System.Text.Json.Serialization;
 using csgo.Models;
-using Newtonsoft.Json;
 
 namespace csgo
 {
@@ -84,11 +84,11 @@ namespace csgo
             /// <summary>
             /// Állapot
             /// </summary>
-            [Required][JsonProperty("status")] public string? Status { get; init; }
+            [Required][JsonPropertyName("status")] public string? Status { get; init; }
             /// <summary>
             /// Részletek
             /// </summary>
-            [Required][JsonProperty("message")] public string? Message { get; init; }
+            [Required][JsonPropertyName("message")] public string? Message { get; init; }
         }
 
         /// <summary>
@@ -98,12 +98,12 @@ namespace csgo
             /// <summary>
             /// A fejlesztés eredménye (sikerult-e)
             /// </summary>
-            [Required][JsonProperty("success")] public bool Success { get; init; }
+            [Required][JsonPropertyName("success")] public bool Success { get; init; }
 
             /// <summary>
             /// A fejlesztett tárgy (null ha nem sikerült)
             /// </summary>
-            [Required][JsonProperty("item")] public ItemResponse? Item { get; init; }
+            [Required][JsonPropertyName("item")] public ItemResponse? Item { get; init; }
         }
 
         /// <summary>
@@ -114,37 +114,37 @@ namespace csgo
             /// <summary>
             /// A tárgy azonosítója
             /// </summary>
-            [Required][JsonProperty("itemId")] public int ItemId { get; init; }
+            [Required][JsonPropertyName("itemId")] public int ItemId { get; init; }
 
             /// <summary>
             /// A tárgy neve
             /// </summary>
-            [Required][JsonProperty("itemName")] public string? ItemName { get; init; }
+            [Required][JsonPropertyName("itemName")] public string? ItemName { get; init; }
 
             /// <summary>
             /// A tárgy leírása
             /// </summary>
-            [Required][JsonProperty("itemDescription")] public string? ItemDescription { get; init; }
+            [Required][JsonPropertyName("itemDescription")] public string? ItemDescription { get; init; }
 
             /// <summary>
             /// A tárgy ritkasága
             /// </summary>
-            [Required][JsonProperty("itemRarity")] public ItemRarity ItemRarity { get; init; }
+            [Required][JsonPropertyName("itemRarity")] public ItemRarity ItemRarity { get; init; }
 
             /// <summary>
             /// A tárgy skinének neve
             /// </summary>
-            [Required][JsonProperty("itemSkinName")] public string ItemSkinName { get; init; } = null!;
+            [Required][JsonPropertyName("itemSkinName")] public string ItemSkinName { get; init; } = null!;
 
             /// <summary>
             /// A tárgy értéke
             /// </summary>
-            [Required][JsonProperty("itemValue")] public decimal ItemValue { get; init; }
+            [Required][JsonPropertyName("itemValue")] public decimal ItemValue { get; init; }
 
             /// <summary>
             /// A tárgy képének URL-je
             /// </summary>
-            [Required][JsonProperty("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
+            [Required][JsonPropertyName("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
         }
 
         /// <summary>
@@ -155,27 +155,27 @@ namespace csgo
             /// <summary>
             /// A láda azonosítója
             /// </summary>
-            [Required][JsonProperty("caseId")] public int ItemId { get; init; }
+            [Required][JsonPropertyName("caseId")] public int ItemId { get; init; }
 
             /// <summary>
             /// A láda neve
             /// </summary>
-            [Required][JsonProperty("caseName")] public string? ItemName { get; init; }
+            [Required][JsonPropertyName("caseName")] public string? ItemName { get; init; }
 
             /// <summary>
             /// A láda képének URL-je
             /// </summary>
-            [Required][JsonProperty("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
+            [Required][JsonPropertyName("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
 
             /// <summary>
             /// A láda értéke.
             /// </summary>
-            [Required][JsonProperty("itemValue")] public decimal ItemValue { get; init; }
+            [Required][JsonPropertyName("itemValue")] public decimal ItemValue { get; init; }
 
             /// <summary>
             /// A láda elemeinek listája
             /// </summary>
-            [Required][JsonProperty("items")] public List<ItemResponse>? Items { get; init; }
+            [Required][JsonPropertyName("items")] public List<ItemResponse>? Items { get; init; }
         }
 
         /// <summary>
@@ -186,47 +186,47 @@ namespace csgo
             /// <summary>
             /// A felhasználó azonosítója
             /// </summary>
-            [Required][JsonProperty("userId")] public int Id { get; init; }
+            [Required][JsonPropertyName("userId")] public int Id { get; init; }
 
             /// <summary>
             /// A felhasználó felhasználoneve
             /// </summary>
-            [Required][JsonProperty("userName")] public string? Username { get; init; }
+            [Required][JsonPropertyName("userName")] public string? Username { get; init; }
 
             /// <summary>
             /// A felhasználó email címe
             /// </summary>
-            [Required][JsonProperty("userEmail")] public string? Email { get; init; }
+            [Required][JsonPropertyName("userEmail")] public string? Email { get; init; }
 
             /// <summary>
             /// A felhasználó egyenlege
             /// </summary>
-            [Required][JsonProperty("userBalance")] public double Balance { get; init; }
+            [Required][JsonPropertyName("userBalance")] public double Balance { get; init; }
 
             /// <summary>
             /// A felhasználó bejelentkezési sorozata
             /// </summary>
-            [Required][JsonProperty("userLoginStreak")] public int LoginStreak { get; init; }
+            [Required][JsonPropertyName("userLoginStreak")] public int LoginStreak { get; init; }
 
             /// <summary>
             /// Megadja, hogy a felhasználónak be van e kapcsolva a TOTP-alapú kétfaktoros bejelentkezés
             /// </summary>
-            [Required][JsonProperty("userTotpEnabled")] public bool TotpEnabled { get; init; }
+            [Required][JsonPropertyName("userTotpEnabled")] public bool TotpEnabled { get; init; }
 
             /// <summary>
             /// Megadja, hogy a felhasználónak be van e kapcsolva a WebAuthn-alapú kétfaktoros bejelentkezés
             /// </summary>
-            [Required][JsonProperty("userWebauthnEnabled")] public bool WebauthnEnabled { get; init; }
+            [Required][JsonPropertyName("userWebauthnEnabled")] public bool WebauthnEnabled { get; init; }
 
             /// <summary>
             /// Megadja, hogy a felhasználó admin e
             /// </summary>
-            [Required][JsonProperty("userIsAdmin")] public bool IsAdmin { get; init; }
+            [Required][JsonPropertyName("userIsAdmin")] public bool IsAdmin { get; init; }
 
             /// <summary>
             /// A felhasználó leltárában lévő elemek listája.
             /// </summary>
-            [Required][JsonProperty("userInventoryItems", DefaultValueHandling = DefaultValueHandling.Ignore)] public List<ItemResponse>? InventoryItems { get; init; }
+            [Required][JsonPropertyName("userInventoryItems")][JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public List<ItemResponse>? InventoryItems { get; init; }
         }
 
         /// <summary>
@@ -237,27 +237,27 @@ namespace csgo
             /// <summary>
             /// A nyereményjáték azonosítója
             /// </summary>
-            [Required][JsonProperty("giveawayId")] public int GiveawayId { get; init; }
+            [Required][JsonPropertyName("giveawayId")] public int GiveawayId { get; init; }
 
             /// <summary>
             /// A nyereményjáték neve
             /// </summary>
-            [Required][JsonProperty("giveawayName")] public string? GiveawayName { get; init; }
+            [Required][JsonPropertyName("giveawayName")] public string? GiveawayName { get; init; }
 
             /// <summary>
             /// A nyereményjáték leírása
             /// </summary>
-            [Required][JsonProperty("giveawayDescription")] public string? GiveawayDescription { get; init; }
+            [Required][JsonPropertyName("giveawayDescription")] public string? GiveawayDescription { get; init; }
 
             /// <summary>
             /// A nyereményjáték kezdetének ideje
             /// </summary>
-            [Required][JsonProperty("giveawayDate")] public DateTime GiveawayDate { get; init; }
+            [Required][JsonPropertyName("giveawayDate")] public DateTime GiveawayDate { get; init; }
 
             /// <summary>
             /// A nyereményjátékban nyerhető tárgy azonosítója
             /// </summary>
-            [Required][JsonProperty("giveawayItem")] public string? GiveawayItem { get; init; }
+            [Required][JsonPropertyName("giveawayItem")] public string? GiveawayItem { get; init; }
         }
 
         /// <summary>
@@ -268,27 +268,27 @@ namespace csgo
             /// <summary>
             /// A nyeremenyjáték azonosítója
             /// </summary>
-            [Required][JsonProperty("giveawayId")] public int GiveawayId { get; init; }
+            [Required][JsonPropertyName("giveawayId")] public int GiveawayId { get; init; }
 
             /// <summary>
             /// A nyereményjáték neve
             /// </summary>
-            [Required][JsonProperty("giveawayName")] public string? GiveawayName { get; init; }
+            [Required][JsonPropertyName("giveawayName")] public string? GiveawayName { get; init; }
 
             /// <summary>
             /// A nyereményjáték leírása
             /// </summary>
-            [Required][JsonProperty("giveawayDescription")] public string? GiveawayDescription { get; init; }
+            [Required][JsonPropertyName("giveawayDescription")] public string? GiveawayDescription { get; init; }
 
             /// <summary>
             /// A nyereményjáték kezdetének ideje
             /// </summary>
-            [Required][JsonProperty("giveawayItem")] public string? GiveawayItem { get; init; }
+            [Required][JsonPropertyName("giveawayItem")] public string? GiveawayItem { get; init; }
 
             /// <summary>
             /// A nyereményjáték nyertesének neve
             /// </summary>
-            [Required][JsonProperty("winnerName")] public string? WinnerName { get; init; }
+            [Required][JsonPropertyName("winnerName")] public string? WinnerName { get; init; }
         }
 
         /// <summary>
@@ -298,42 +298,42 @@ namespace csgo
             /// <summary>
             /// A leltár azonosítója
             /// </summary>
-            [Required][JsonProperty("inventoryId")] public int InventoryId { get; init; }
+            [Required][JsonPropertyName("inventoryId")] public int InventoryId { get; init; }
 
             /// <summary>
             /// A tárgy azonosítója
             /// </summary>
-            [Required][JsonProperty("itemId")] public int ItemId { get; init; }
+            [Required][JsonPropertyName("itemId")] public int ItemId { get; init; }
 
             /// <summary>
             /// A tárgy neve
             /// </summary>
-            [Required][JsonProperty("itemName")] public string? ItemName { get; init; }
+            [Required][JsonPropertyName("itemName")] public string? ItemName { get; init; }
 
             /// <summary>
             /// A tárgy leírása
             /// </summary>
-            [Required][JsonProperty("itemDescription")] public string? ItemDescription { get; init; }
+            [Required][JsonPropertyName("itemDescription")] public string? ItemDescription { get; init; }
 
             /// <summary>
             /// A tárgy ritkasága
             /// </summary>
-            [Required][JsonProperty("itemRarity")] public ItemRarity ItemRarity { get; init; }
+            [Required][JsonPropertyName("itemRarity")] public ItemRarity ItemRarity { get; init; }
 
             /// <summary>
             /// A tárgy skinének neve
             /// </summary>
-            [Required][JsonProperty("itemSkinName")] public string ItemSkinName { get; init; } = null!;
+            [Required][JsonPropertyName("itemSkinName")] public string ItemSkinName { get; init; } = null!;
 
             /// <summary>
             /// A tárgy értéke
             /// </summary>
-            [Required][JsonProperty("itemValue")] public decimal ItemValue { get; init; }
+            [Required][JsonPropertyName("itemValue")] public decimal ItemValue { get; init; }
 
             /// <summary>
             /// A tárgy képének URL-je
             /// </summary>
-            [Required][JsonProperty("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
+            [Required][JsonPropertyName("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
         }
     }
 }
