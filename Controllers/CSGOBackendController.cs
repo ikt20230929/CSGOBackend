@@ -48,7 +48,7 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(ActionStatus), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(ActionStatus), StatusCodes.Status400BadRequest)]
         [Route("register")]
-        public ActionResult<ActionStatus> Register(RegisterRequest register)
+        public async Task<ActionResult<ActionStatus>> Register(RegisterRequest register)
         {
             User newUser = new()
             {
@@ -56,20 +56,20 @@ namespace csgo.Controllers
                 Username = register.Username
             };
             
-            if (context.Users.Any(u => u.Username == register.Username))
+            if (await context.Users.AnyAsync(u => u.Username == register.Username))
             {
                 return BadRequest(new ActionStatus{ Status = "ERR", Message = "A megadott felhasználónév már foglalt." });
             }
 
-            if (context.Users.Any(u => u.Email == register.Email))
+            if (await context.Users.AnyAsync(u => u.Email == register.Email))
             {
                 return BadRequest(new ActionStatus{ Status = "ERR", Message = "Az megadott e-mail már használatban van." });
             }
 
             string hashedPassword = BCrypt.Net.BCrypt.HashPassword(register.Password);
             newUser.PasswordHash = hashedPassword;
-            context.Users.Add(newUser);
-            context.SaveChanges();
+            await context.Users.AddAsync(newUser);
+            await context.SaveChangesAsync();
 
             return Ok(new ActionStatus{ Status = "OK", Message = "Sikeres regisztráció!" });
         }
@@ -87,9 +87,9 @@ namespace csgo.Controllers
         [Produces("application/json")]
         [Route("profile")]
         [Authorize]
-        public ActionResult<UserResponse> Profile()
+        public async Task<ActionResult<UserResponse>> Profile()
         {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
             return Ok(user.ToDto(null!));
         }
@@ -99,13 +99,13 @@ namespace csgo.Controllers
         /// </summary>
         /// <param name="token">A refresh token.</param>
         /// <returns>A tokenhez tartozó felhasználót.</returns>
-        private User GetUserFromRefreshJwt(string token)
+        private async Task<User> GetUserFromRefreshJwt(string token)
         {
 
             var tokenHandler = new JwtSecurityTokenHandler();
-            var jwtToken = tokenHandler.ReadToken(token) as JwtSecurityToken;
+            var jwtToken = tokenHandler.ReadJwtToken(token);
             jwtToken!.Payload.TryGetValue("name", out var username);
-            return context.Users.First(x => x.Username == (string)username!);
+            return await context.Users.FirstAsync(x => x.Username == (string)username!);
         }
 
         /// <summary>
@@ -121,11 +121,11 @@ namespace csgo.Controllers
         [Produces("application/json")]
         [Route("inventory")]
         [Authorize]
-        public ActionResult<List<InventoryItemResponse>> Inventory()
+        public async Task<ActionResult<List<InventoryItemResponse>>> Inventory()
         {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
-            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
+            List<InventoryItemResponse> items = await context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId)).ToListAsync();
 
             return Ok(items);
         }
@@ -142,11 +142,11 @@ namespace csgo.Controllers
         [Consumes("application/json")]
         [Produces("application/json")]
         [Route("refresh-token")]
-        public ActionResult<ActionStatus> RefreshToken()
+        public async Task<ActionResult<ActionStatus>> RefreshToken()
         {
             var currentRefreshToken = HttpContext.Request.Cookies["refreshToken"];
             if (currentRefreshToken == null) return Unauthorized();
-            User user = GetUserFromRefreshJwt(currentRefreshToken);
+            User user = await GetUserFromRefreshJwt(currentRefreshToken);
             var (accessToken, refreshToken) = GenerateTokens(user);
 
             Response.Cookies.Append("refreshToken", refreshToken, new CookieOptions
@@ -154,9 +154,7 @@ namespace csgo.Controllers
                 HttpOnly = true,
                 SameSite = SameSiteMode.None,
                 MaxAge = TimeSpan.FromDays(7),
-#if RELEASE
                 Secure = true
-#endif
             });
 
             return Ok(new ActionStatus{ Status = "OK", Message = accessToken });
@@ -177,7 +175,7 @@ namespace csgo.Controllers
         [Route("login")]
         public async Task<ActionResult<ActionStatus>> LoginUser(LoginRequest login)
         {
-            var storedUser = context.Users.FirstOrDefault(u => u.Username == login.Username);
+            var storedUser = await context.Users.FirstOrDefaultAsync(u => u.Username == login.Username);
 
             if (storedUser == null)
             {
@@ -286,9 +284,16 @@ namespace csgo.Controllers
         /// <summary>
         /// WebAuthn attesztáció (1. lépés).
         /// </summary>
+        /// <returns>A WebAuthn attesztáció beállításait.</returns>
+        /// <response code="200">Visszaadja a WebAuthn attesztáció beállításait.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpGet]
         [Authorize]
         [Route("webauthn")]
+        [ProducesResponseType(typeof(CredentialCreateOptions), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
         public async Task<ActionResult> WebAuthnAttestation()
         {
             var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
@@ -315,9 +320,20 @@ namespace csgo.Controllers
         /// WebAuthn attesztáció (2. lépés).
         /// </summary>
         /// <param name="attestationResponse">A WebAuthn attesztáció válasza.</param>
+        /// <returns>200 ha sikerült, 400 ha nem.</returns>
+        /// <response code="200">A WebAuthn attesztáció sikeres volt.</response>
+        /// <response code="400">A WebAuthn attesztáció sikertelen volt.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        /// <response code="404">A WebAuthn attesztáció beállításai nem találhatók a jelenlegi munkamenetben.</response>
         [HttpPost]
         [Authorize]
         [Route("webauthn")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
         public async Task<ActionResult> WebAuthnAttestation([FromBody] AuthenticatorAttestationRawResponse attestationResponse)
         {
             var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
@@ -373,12 +389,12 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
         [Produces("application/json")]
         [Authorize]
-        public ActionResult<ActionStatus> GenerateTotpToken() {
-            var user = context.Users.First(x => x.Username == User.Identity!.Name);
+        public async Task<ActionResult<ActionStatus>> GenerateTotpToken() {
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if(user.TotpEnabled) return Conflict();
 
             user.TotpSecret = Base32Encoding.ToString(KeyGeneration.GenerateRandomKey(20));
-            context.SaveChanges();
+            await context.SaveChangesAsync();
 
             return Ok(new ActionStatus { Status = "OK", Message = user.TotpSecret });
         }
@@ -401,8 +417,8 @@ namespace csgo.Controllers
         [Produces("application/json")]
         [Consumes("application/json")]
         [Authorize]
-        public ActionResult<ActionStatus> CheckTotpToken(EnableTOTPRequest request) {
-            var user = context.Users.First(x => x.Username == User.Identity!.Name);
+        public async Task<ActionResult<ActionStatus>> CheckTotpToken(EnableTOTPRequest request) {
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if(user.TotpEnabled) return Conflict();
 
             var totp = new Totp(Base32Encoding.ToBytes(user.TotpSecret));
@@ -410,7 +426,7 @@ namespace csgo.Controllers
 
             if(verify) {
                 user.TotpEnabled = true;
-                context.SaveChanges();
+                await context.SaveChangesAsync();
                 return NoContent();
             }else{
                 return Forbid();
@@ -435,8 +451,8 @@ namespace csgo.Controllers
         [Consumes("application/json")]
         [Produces("application/json")]
         [Authorize]
-        public ActionResult<ActionStatus> DisableTotp(DisableTOTPRequest request) {
-            var user = context.Users.First(x => x.Username == User.Identity!.Name);
+        public async Task<ActionResult<ActionStatus>> DisableTotp(DisableTOTPRequest request) {
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if(!user.TotpEnabled) return Conflict();
 
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash)) return Forbid();
@@ -446,7 +462,7 @@ namespace csgo.Controllers
 
             if(verify) {
                 user.TotpEnabled = false;
-                context.SaveChanges();
+                await context.SaveChangesAsync();
                 return NoContent();
             }else{
                 return Forbid();
@@ -468,9 +484,9 @@ namespace csgo.Controllers
         [Consumes("application/json")]
         [Produces("application/json")]
         [Authorize]
-        public ActionResult IsAdmin()
+        public async Task<ActionResult> IsAdmin()
         {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             return user.IsAdmin ? NoContent() : Forbid();
         }
 
@@ -489,12 +505,12 @@ namespace csgo.Controllers
         [Consumes("application/json")]
         [Produces("application/json")]
         [Authorize]
-        public ActionResult<List<ItemResponse>> GetItems()
+        public async Task<ActionResult<List<ItemResponse>>> GetItems()
         {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            return Ok(context.Items.Where(x => x.ItemType == ItemType.Item).Select(x => x.ToDto()).ToList());
+            return Ok(await context.Items.Where(x => x.ItemType == ItemType.Item).Select(x => x.ToDto()).ToListAsync());
         }
 
         /// <summary>
@@ -512,14 +528,14 @@ namespace csgo.Controllers
         [Consumes("application/json")]
         [Produces("application/json")]
         [Authorize]
-        public ActionResult<List<UserResponse>> GetUsers()
+        public async Task<ActionResult<List<UserResponse>>> GetUsers()
         {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            return Ok(context.Users.Select(x => x.ToDto(
+            return Ok(await context.Users.Select(x => x.ToDto(
                 context.Userinventories.Where(y => y.UserId == x.UserId)
-                    .Select(z => z.Item.ToDto()).ToList())).ToList());
+                    .Select(z => z.Item.ToDto()).ToList())).ToListAsync());
         }
 
         /// <summary>
@@ -541,22 +557,24 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Authorize]
-        public ActionResult AddInventoryItem(int userId, int itemId)
+        public async Task<ActionResult> AddInventoryItem(int userId, int itemId)
         {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            var target = context.Users.FirstOrDefault(x => x.UserId == userId);
-            var item = context.Items.FirstOrDefault(x => x.ItemId == itemId);
+            var target = await context.Users.FirstOrDefaultAsync(x => x.UserId == userId);
+            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId);
             if (target == null || item == null) return NotFound();
 
-            context.Userinventories.Add(new Userinventory {
+            await context.Userinventories.AddAsync(new Userinventory {
                 UserId = target.UserId,
                 ItemId = item.ItemId
             });
-            context.SaveChanges();
+            await context.SaveChangesAsync();
 
-            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
+            List<InventoryItemResponse> items = await context.Userinventories.Where(x => x.UserId == user.UserId)
+                .Select(x => x.Item.ToInventoryItemDto(x.InventoryId))
+                .ToListAsync();
             
             return Ok(items);
 
@@ -581,22 +599,22 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Route("admin/inventory/{userId:int}/items/{itemId:int}")]
         [Authorize]
-        public ActionResult DeleteInventoryItem(int userId, int itemId)
+        public async Task<ActionResult> DeleteInventoryItem(int userId, int itemId)
         {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            var target = context.Users.FirstOrDefault(x => x.UserId == userId);
-            var item = context.Items.FirstOrDefault(x => x.ItemId == itemId);
+            var target = await context.Users.FirstOrDefaultAsync(x => x.UserId == userId);
+            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId);
             if (target == null || item == null) return NotFound();
 
-            var userInventory = context.Userinventories.FirstOrDefault(x => x.UserId == target.UserId && x.ItemId == item.ItemId);
+            var userInventory = await context.Userinventories.FirstOrDefaultAsync(x => x.UserId == target.UserId && x.ItemId == item.ItemId);
             if (userInventory == null) return NotFound();
             
             context.Userinventories.Remove(userInventory);
-            context.SaveChanges();
+            await context.SaveChangesAsync();
 
-            List<InventoryItemResponse> items = [.. context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId))];
+            List<InventoryItemResponse> items = await context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId)).ToListAsync();
             
             return Ok(items);
         }
@@ -617,9 +635,9 @@ namespace csgo.Controllers
         [Consumes("application/json")]
         [Produces("application/json")]
         [Authorize]
-        public ActionResult<ItemResponse> AddItem(ItemRecord details)
+        public async Task<ActionResult<ItemResponse>> AddItem(ItemRecord details)
         {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
 
@@ -632,8 +650,9 @@ namespace csgo.Controllers
                 ItemSkinName = details.SkinName,
                 ItemValue = details.Value
             };
-            context.Items.Add(item);
-            context.SaveChanges();
+            
+            await context.Items.AddAsync(item);
+            await context.SaveChangesAsync();
 
             return Ok(item.ToDto());
         }
@@ -651,14 +670,27 @@ namespace csgo.Controllers
         [Consumes("application/json")]
         [Produces("application/json")]
         [Authorize]
-        public ActionResult<List<CaseResponse>> GetCases()
+        public async Task<ActionResult<List<CaseResponse>>> GetCases()
         {
+                var items = await context.Items
+                    .Where(x => x.ItemType == ItemType.Case)
+                    .ToListAsync();
 
-            return Ok(context.Items.Where(x => x.ItemType == ItemType.Case).Select(
-                x => x.ToCaseDto(
-                    context.CaseItems
-                        .Where(y => y.CaseId == x.ItemId)
-                        .Select(z => z.Item).Select(z => z.ToDto()).ToList())).ToList());
+                var caseDtos = new List<CaseResponse>();
+
+                foreach (var item in items)
+                {
+                    var caseItems = await context.CaseItems
+                        .Where(y => y.CaseId == item.ItemId)
+                        .Select(z => z.Item)
+                        .Select(z => z.ToDto())
+                        .ToListAsync();
+
+                    var caseDto = item.ToCaseDto(caseItems);
+                    caseDtos.Add(caseDto);
+                }
+
+                return Ok(caseDtos);
         }
 
         /// <summary>
@@ -679,19 +711,19 @@ namespace csgo.Controllers
         [Consumes("application/json")]
         [Produces("application/json")]
         [Authorize]
-        public ActionResult<ItemResponse> OpenCase(int caseId)
+        public async Task<ActionResult<ItemResponse>> OpenCase(int caseId)
         {
-            var user = context.Users.First(x => x.Username == User.Identity!.Name);
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
-            var @case = context.Items.FirstOrDefault(x => x.ItemType == ItemType.Case && x.ItemId == caseId);
+            var @case = await context.Items.FirstOrDefaultAsync(x => x.ItemType == ItemType.Case && x.ItemId == caseId);
             if(@case == null) return NotFound();
 
-            var userInventory = context.Userinventories.Where(x => x.UserId == user.UserId).Include(x => x.Item).ToList();
+            var userInventory = await context.Userinventories.Where(x => x.UserId == user.UserId).Include(x => x.Item).ToListAsync();
             var userCase = userInventory.Find(x => x.Item == @case);
 
             if (userCase == null) return Forbid();
             {
-                var ctxCaseItems = context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).ToArray();
+                var ctxCaseItems = await context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).ToArrayAsync();
 
                 var weights = new Dictionary<Item, double>();
                 foreach (var item in ctxCaseItems)
@@ -708,12 +740,13 @@ namespace csgo.Controllers
                 var resultItem = caseItems.Next();
 
                 context.Userinventories.Remove(userCase);
-                context.Userinventories.Add(new Userinventory
+                await context.Userinventories.AddAsync(new Userinventory
                 {
                     ItemId = resultItem.ItemId,
                     UserId = user.UserId
                 });
-                context.SaveChanges();
+                
+                await context.SaveChangesAsync();
 
                 return Ok(resultItem.ToDto());
             }
@@ -725,7 +758,7 @@ namespace csgo.Controllers
         /// <param name="from">Az tárgy leltárazonosítója.</param>
         /// <param name="multiplier">A szorzó érték.</param>
         /// <returns>Visszaadja a fejleszett tárgya továbbfejlesztésének esélyét.</returns>
-        /// <response code="200">Visszaadja a fejleszett órgya továbbfejlesztésének esélyét.</response>
+        /// <response code="200">Visszaadja a fejleszett tárgy továbbfejlesztésének esélyét.</response>
         /// <response code="404">Nem található a megadott tárgy.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpGet]
@@ -734,15 +767,15 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Authorize]
-        public ActionResult<ActionStatus> GetUpgradeChance(int from, int multiplier) {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+        public async Task<ActionResult<ActionStatus>> GetUpgradeChance(int from, int multiplier) {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
-            Userinventory? inventoryItem = context.Userinventories.Include(x => x.Item).FirstOrDefault(x => x.InventoryId == from && x.UserId == user.UserId);
+            Userinventory? inventoryItem = await context.Userinventories.Include(x => x.Item).FirstOrDefaultAsync(x => x.InventoryId == from && x.UserId == user.UserId);
 
             if(inventoryItem == null) return NotFound();
 
             var nextItemValue = inventoryItem.Item.ItemValue * multiplier;
-            var nextItem = context.Items.Where(x => x.ItemValue >= nextItemValue && x.ItemRarity >= inventoryItem.Item.ItemRarity).OrderBy(x => x.ItemValue).FirstOrDefault();
+            var nextItem = await context.Items.Where(x => x.ItemValue >= nextItemValue && x.ItemRarity >= inventoryItem.Item.ItemRarity).OrderBy(x => x.ItemValue).FirstOrDefaultAsync();
             if(nextItem == null) return NotFound();
 
             InventoryItemResponse itemData = inventoryItem.Item.ToInventoryItemDto(inventoryItem.InventoryId);
@@ -767,28 +800,28 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Authorize]
-        public ActionResult<ItemUpgradeResponse> UpgradeItem(int from, int multiplier) {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+        public async Task<ActionResult<ItemUpgradeResponse>> UpgradeItem(int from, int multiplier) {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
-            Userinventory? inventoryItem = context.Userinventories.Include(x => x.Item).FirstOrDefault(x => x.InventoryId == from && x.UserId == user.UserId);
+            Userinventory? inventoryItem = await context.Userinventories.Include(x => x.Item).FirstOrDefaultAsync(x => x.InventoryId == from && x.UserId == user.UserId);
 
             if(inventoryItem == null) return NotFound();
 
             InventoryItemResponse itemData = inventoryItem.Item.ToInventoryItemDto(inventoryItem.InventoryId);
 
             var nextItemValue = inventoryItem.Item.ItemValue * multiplier;
-            var nextItem = context.Items.Where(x => x.ItemValue >= nextItemValue && x.ItemRarity >= inventoryItem.Item.ItemRarity).OrderBy(x => x.ItemValue).FirstOrDefault();
+            var nextItem = await context.Items.Where(x => x.ItemValue >= nextItemValue && x.ItemRarity >= inventoryItem.Item.ItemRarity).OrderBy(x => x.ItemValue).FirstOrDefaultAsync();
             if(nextItem == null) return NotFound();
 
             var chance = GetItemUpgradeSuccessChance(itemData, nextItem);
 
             if(GetRandomDouble() < chance) {
                 context.Userinventories.Remove(inventoryItem);
-                context.Userinventories.Add(new Userinventory {
+                await context.Userinventories.AddAsync(new Userinventory {
                     ItemId = nextItem.ItemId,
                     UserId = user.UserId
                 });
-                context.SaveChanges();
+                await context.SaveChangesAsync();
 
                 return Ok(new ItemUpgradeResponse {
                     Success = true,
@@ -796,7 +829,7 @@ namespace csgo.Controllers
                 });
             } else {
                 context.Userinventories.Remove(inventoryItem);
-                context.SaveChanges();
+                await context.SaveChangesAsync();
                 
                 return Ok(new ItemUpgradeResponse {
                     Success = false,
@@ -820,8 +853,8 @@ namespace csgo.Controllers
         [Consumes("application/json")]
         [Produces("application/json")]
         [Authorize]
-        public ActionResult ClaimDailyReward() {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+        public async Task<ActionResult> ClaimDailyReward() {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if(user.LastClaimDate.Date == DateTime.Now.Date) return Conflict();
 
             // Ha az utolsó kérés dátuma nem az aktuális hónapban van, akkor a streaket nullázni kell.
@@ -842,7 +875,7 @@ namespace csgo.Controllers
             user.LastClaimDate = DateTime.Now;
             user.Balance += reward;
 
-            context.SaveChanges();
+            await context.SaveChangesAsync();
 
             return Ok(new { Status = "OK", Amount = reward });
         }
@@ -867,7 +900,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult> JoinGiveaway(int id)
         {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
             var giveaway = await context.Giveaways.Where(x => x.GiveawayDate > DateTime.Now && x.GiveawayId == id).Include(x => x.Users).FirstOrDefaultAsync();
             if (giveaway == null) return NotFound();
@@ -957,9 +990,9 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Authorize]
-        public ActionResult AddCase(CaseRecord details)
+        public async Task<ActionResult> AddCase(CaseRecord details)
         {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
 
@@ -969,8 +1002,9 @@ namespace csgo.Controllers
                 ItemType = ItemType.Case,
                 ItemValue = details.Value,
             };
-            context.Items.Add(@case);
-            context.SaveChanges();
+            
+            await context.Items.AddAsync(@case);
+            await context.SaveChangesAsync();
 
             return Ok(@case.ToCaseDto(new List<ItemResponse>()));
         }
@@ -994,25 +1028,25 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Authorize]
-        public ActionResult AddCaseItem(int caseId, int itemId)
+        public async Task<ActionResult> AddCaseItem(int caseId, int itemId)
         {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
 
-            var @case = context.Items.FirstOrDefault(x => x.ItemType == ItemType.Case && x.ItemId == caseId);
-            var item = context.Items.FirstOrDefault(x => x.ItemType == ItemType.Item && x.ItemId == itemId);
+            var @case = await context.Items.FirstOrDefaultAsync(x => x.ItemType == ItemType.Case && x.ItemId == caseId);
+            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemType == ItemType.Item && x.ItemId == itemId);
 
             if (@case == null || item == null) return NotFound();
 
-            context.CaseItems.Add(new CaseItem
+            await context.CaseItems.AddAsync(new CaseItem
             {
                 CaseId = @case.ItemId,
                 ItemId = item.ItemId
             });
-            context.SaveChanges();
+            await context.SaveChangesAsync();
             
-            var caseItems = context.CaseItems.Where(x => x.Case == @case).Select(x => x.Item.ToDto()).ToList();
+            var caseItems = await context.CaseItems.Where(x => x.Case == @case).Select(x => x.Item.ToDto()).ToListAsync();
 
             return Ok(@case.ToCaseDto(caseItems));
 
@@ -1037,23 +1071,23 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Route("admin/cases/{caseId:int}/items/{itemId:int}")]
         [Authorize]
-        public ActionResult DeleteCaseItem(int caseId, int itemId)
+        public async Task<ActionResult> DeleteCaseItem(int caseId, int itemId)
         {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
 
-            var @case = context.Items.Find(caseId);
-            var item = context.Items.Find(itemId);
+            var @case = await context.Items.FindAsync(caseId);
+            var item = await context.Items.FindAsync(itemId);
             if (@case == null || item == null) return NotFound();
 
-            var caseItem = context.CaseItems.Find(caseId, itemId);
+            var caseItem = await context.CaseItems.FindAsync(caseId, itemId);
             if(caseItem == null) return NotFound();
 
             context.CaseItems.Remove(caseItem);
-            context.SaveChanges();
+            await context.SaveChangesAsync();
 
-            var caseItems = context.CaseItems.Where(x => x.Case == @case).Select(x => x.Item.ToDto()).ToList();
+            var caseItems = await context.CaseItems.Where(x => x.Case == @case).Select(x => x.Item.ToDto()).ToListAsync();
 
             return Ok(@case.ToCaseDto(caseItems));
         }
@@ -1076,11 +1110,11 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [Authorize]
-        public ActionResult<CurrentGiveawayResponse> AddGiveaway(GiveawayRecord details) {
-            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+        public async Task<ActionResult<CurrentGiveawayResponse>> AddGiveaway(GiveawayRecord details) {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            var item = context.Items.Find(details.ItemId);
+            var item = await context.Items.FindAsync(details.ItemId);
             if (item == null) return NotFound();
 
             var giveaway = new Giveaway{
@@ -1090,8 +1124,8 @@ namespace csgo.Controllers
                 GiveawayName = details.Name,
             };
 
-            context.Giveaways.Add(giveaway);
-            context.SaveChanges();
+            await context.Giveaways.AddAsync(giveaway);
+            await context.SaveChangesAsync();
 
             return Ok(new CurrentGiveawayResponse {
                 GiveawayDate = giveaway.GiveawayDate,
@@ -1141,9 +1175,7 @@ namespace csgo.Controllers
                 HttpOnly = true,
                 SameSite = SameSiteMode.None,
                 MaxAge = TimeSpan.FromDays(7),
-#if RELEASE
                 Secure = true
-#endif
             });
             return Ok(new ActionStatus{ Status = "OK", Message = accessToken });
 
