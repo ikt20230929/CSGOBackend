@@ -533,9 +533,17 @@ namespace csgo.Controllers
             User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
-            return Ok(await context.Users.Select(x => x.ToDto(
-                context.Userinventories.Where(y => y.UserId == x.UserId)
-                    .Select(z => z.Item.ToDto()).ToList())).ToListAsync());
+            var users = await context.Users.ToListAsync();
+
+            var userDtos = new List<UserResponse>();
+
+            foreach (var u in users)
+            {
+                var items = await context.Userinventories.Where(x => x.UserId == u.UserId).Select(x => x.Item.ToDto()).ToListAsync();
+                userDtos.Add(u.ToDto(items));
+            }
+
+            return Ok(userDtos);
         }
 
         /// <summary>
