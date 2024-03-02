@@ -806,6 +806,48 @@ namespace csgo.Controllers
         }
 
         /// <summary>
+        /// Napi jutalom kiváltása.
+        /// </summary>
+        /// <returns>A napi jutalom mennyiségét.</returns>
+        /// <response code="200">Visszaadja a napi jutalom mennyiségét.</response>
+        /// <response code="409">A felhasználó már kiváltotta a napi jutalmat.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpGet]
+        [Route("daily")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [Authorize]
+        public ActionResult ClaimDailyReward() {
+            User user = context.Users.First(x => x.Username == User.Identity!.Name);
+            if(user.LastClaimDate.Date == DateTime.Now.Date) return Conflict();
+
+            // Ha az utolsó kérés dátuma nem az aktuális hónapban van, akkor a streaket nullázni kell.
+            if(user.LastClaimDate.Month != DateTime.Now.Month) user.LoginStreak = 1;
+
+            int reward = 5;
+            
+            if(user.LastClaimDate.Date.AddDays(1) == DateTime.Now.Date) {
+                user.LoginStreak++;
+                if(user.LoginStreak == 3) reward *= 2;
+                if(user.LoginStreak == 7) reward *= 3;
+                if(user.LoginStreak == 14) reward *= 4;
+                if(user.LoginStreak == 30) reward *= 5;
+            } else {
+                user.LoginStreak = 1;
+            }
+
+            user.LastClaimDate = DateTime.Now;
+            user.Balance += reward;
+
+            context.SaveChanges();
+
+            return Ok(new { Status = "OK", Amount = reward });
+        }
+
+        /// <summary>
         /// Csatlakozás egy jelenleg aktív nyereményjátékhoz.
         /// </summary>
         /// <param name="id">A csatlakozandó nyereményjáték azonosítója.</param>

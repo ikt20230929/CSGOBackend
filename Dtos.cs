@@ -209,6 +209,11 @@ namespace csgo
             [Required][JsonPropertyName("userLoginStreak")] public int LoginStreak { get; init; }
 
             /// <summary>
+            /// Az utolsó időpont, amikor a felhasználó kiváltotta a napi bejelentkezési bónuszát.
+            /// </summary>
+            [Required][JsonPropertyName("userLastClaimDate")] public DateTime LastClaimDate { get; init; }
+
+            /// <summary>
             /// Megadja, hogy a felhasználónak be van e kapcsolva a TOTP-alapú kétfaktoros bejelentkezés
             /// </summary>
             [Required][JsonPropertyName("userTotpEnabled")] public bool TotpEnabled { get; init; }

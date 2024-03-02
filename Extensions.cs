@@ -76,6 +76,7 @@ namespace csgo
              IsAdmin = user.IsAdmin,
              Username = user.Username,
              LoginStreak = user.LoginStreak,
+             LastClaimDate = user.LastClaimDate,
              TotpEnabled = user.TotpEnabled,
              WebauthnEnabled = user.WebauthnEnabled
             };

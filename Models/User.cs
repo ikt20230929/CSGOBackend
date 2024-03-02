@@ -36,6 +36,11 @@ public class User
     public int LoginStreak { get; set; } = 0;
 
     /// <summary>
+    /// Az utolsó időpont, amikor a felhasználó kiváltotta a napi bejelentkezési bónuszát.
+    /// </summary>
+    public DateTime LastClaimDate { get; set; }
+
+    /// <summary>
     /// Megadja, hogy a felhasználónak be van e kapcsolva a TOTP-alapú kétfaktoros bejelentkezés
     /// </summary>
     public bool TotpEnabled { get; set; } = false;
