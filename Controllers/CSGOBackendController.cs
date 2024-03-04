@@ -469,202 +469,6 @@ namespace csgo.Controllers
         }
 
         /// <summary>
-        /// A jelenleg bejelentkezett felhasználó admin jogainak ellenőrzése.
-        /// </summary>
-        /// <returns>204-es állapotkódot ha a jelenleg bejelentkezett felhasználó rendelkezik admin jogokkal, különben 403-as állapotkódot.</returns>
-        /// <response code="204">A jelenleg bejelentkezett felhasználó rendelkezik admin jogokkal.</response>
-        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal.</response>
-        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
-        [HttpGet]
-        [Route("admin/check")]
-        [ProducesResponseType(typeof(void), StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
-        [Consumes("application/json")]
-        [Produces("application/json")]
-        [Authorize]
-        public async Task<ActionResult> IsAdmin()
-        {
-            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            return user.IsAdmin ? NoContent() : Forbid();
-        }
-
-        /// <summary>
-        /// Az összes létező tárgy adatainak lekérdezése. (Admin jog szükséges)
-        /// </summary>
-        /// <returns>Egy listát, ami tartalmazza az összes tárgy adatait.</returns>
-        /// <response code="200">Visszaad egy listát, ami tartalmazza az összes tárgy adatait.</response>
-        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal.</response>
-        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
-        [HttpGet]
-        [Route("admin/items")]
-        [ProducesResponseType(typeof(List<ItemResponse>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
-        [Consumes("application/json")]
-        [Produces("application/json")]
-        [Authorize]
-        public async Task<ActionResult<List<ItemResponse>>> GetItems()
-        {
-            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            if (!user.IsAdmin) return Forbid();
-
-            return Ok(await context.Items.Where(x => x.ItemType == ItemType.Item).Select(x => x.ToDto()).ToListAsync());
-        }
-
-        /// <summary>
-        /// Az összes létező felhasználó adatainak lekérdezése. (Admin jog szükséges)
-        /// </summary>
-        /// <returns>Egy listát, ami tartalmazza az összes felhasználó adatait.</returns>
-        /// <response code="200">Visszaad egy listát, ami tartalmazza az összes felhasználó adatait.</response>
-        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal.</response>
-        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
-        [HttpGet]
-        [Route("admin/users")]
-        [ProducesResponseType(typeof(List<UserResponse>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
-        [Consumes("application/json")]
-        [Produces("application/json")]
-        [Authorize]
-        public async Task<ActionResult<List<UserResponse>>> GetUsers()
-        {
-            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            if (!user.IsAdmin) return Forbid();
-
-            var users = await context.Users.ToListAsync();
-
-            var userDtos = new List<UserResponse>();
-
-            foreach (var u in users)
-            {
-                var items = await context.Userinventories.Where(x => x.UserId == u.UserId).Select(x => x.Item.ToDto()).ToListAsync();
-                userDtos.Add(u.ToDto(items));
-            }
-
-            return Ok(userDtos);
-        }
-
-        /// <summary>
-        /// Hozzáad egy tárgyat egy felhasználó leltárához. (Admin jog szükséges)
-        /// </summary>
-        /// <param name="userId">A felhasználó azonosítója.</param>
-        /// <param name="itemId">A hozzáadandó tárgy azonosítója.</param>
-        /// <returns>A felhasználó leltárának frissített adatait.</returns>
-        /// <response code="200">Visszaadja a felhasználó leltárának frissített adatait.</response>
-        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
-        /// <response code="404">A tárgy vagy a felhasználó nem található.</response>
-        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
-        [HttpPost]
-        [Route("admin/inventory/{userId:int}/items/{itemId:int}")]
-        [Consumes("application/json")]
-        [Produces("application/json")]
-        [ProducesResponseType(typeof(CaseResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
-        [Authorize]
-        public async Task<ActionResult> AddInventoryItem(int userId, int itemId)
-        {
-            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            if (!user.IsAdmin) return Forbid();
-
-            var target = await context.Users.FirstOrDefaultAsync(x => x.UserId == userId);
-            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId);
-            if (target == null || item == null) return NotFound();
-
-            await context.Userinventories.AddAsync(new Userinventory {
-                UserId = target.UserId,
-                ItemId = item.ItemId
-            });
-            await context.SaveChangesAsync();
-
-            List<InventoryItemResponse> items = await context.Userinventories.Where(x => x.UserId == user.UserId)
-                .Select(x => x.Item.ToInventoryItemDto(x.InventoryId))
-                .ToListAsync();
-            
-            return Ok(items);
-
-        }
-
-        /// <summary>
-        /// Eltávolít egy tárgyat egy felhasználó leltárából. (Admin jog szükséges)
-        /// </summary>
-        /// <param name="userId">A felhasználó azonosítója.</param>
-        /// <param name="itemId">A hozzáadandó tárgy azonosítója.</param>
-        /// <returns>A felhasználó leltárának frissített adatait.</returns>
-        /// <response code="200">Visszaadja a felhasználó leltárának frissített adatait.</response>
-        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
-        /// <response code="404">A tárgy vagy a felhasználó nem található, vagy a tárgy nincs a felhasználó leltárában.</response>
-        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
-        [HttpDelete]
-        [Consumes("application/json")]
-        [Produces("application/json")]
-        [ProducesResponseType(typeof(CaseResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
-        [Route("admin/inventory/{userId:int}/items/{itemId:int}")]
-        [Authorize]
-        public async Task<ActionResult> DeleteInventoryItem(int userId, int itemId)
-        {
-            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            if (!user.IsAdmin) return Forbid();
-
-            var target = await context.Users.FirstOrDefaultAsync(x => x.UserId == userId);
-            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId);
-            if (target == null || item == null) return NotFound();
-
-            var userInventory = await context.Userinventories.FirstOrDefaultAsync(x => x.UserId == target.UserId && x.ItemId == item.ItemId);
-            if (userInventory == null) return NotFound();
-            
-            context.Userinventories.Remove(userInventory);
-            await context.SaveChangesAsync();
-
-            List<InventoryItemResponse> items = await context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId)).ToListAsync();
-            
-            return Ok(items);
-        }
-
-        /// <summary>
-        /// Új tárgy létrehozása. (Admin jog szükséges)
-        /// </summary>
-        /// <param name="details">A tárgy leírása.</param>
-        /// <returns>A tárgy leírását.</returns>
-        /// <response code="200">Visszaadja a tárgy leírását.</response>
-        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
-        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
-        [HttpPost]
-        [Route("admin/items")]
-        [ProducesResponseType(typeof(ItemResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
-        [Consumes("application/json")]
-        [Produces("application/json")]
-        [Authorize]
-        public async Task<ActionResult<ItemResponse>> AddItem(ItemRecord details)
-        {
-            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            if (!user.IsAdmin) return Forbid();
-
-
-            Item item = new()
-            {
-                ItemType = ItemType.Item,
-                ItemName = details.Name,
-                ItemDescription = details.Description,
-                ItemRarity = details.Rarity,
-                ItemSkinName = details.SkinName,
-                ItemValue = details.Value
-            };
-            
-            await context.Items.AddAsync(item);
-            await context.SaveChangesAsync();
-
-            return Ok(item.ToDto());
-        }
-
-        /// <summary>
         /// Az összes létező láda adatainak lekérdezése.
         /// </summary>
         /// <returns>Egy listát, ami tartalmazza az összes láda adatait.</returns>
@@ -982,6 +786,27 @@ namespace csgo.Controllers
         }
 
         /// <summary>
+        /// A jelenleg bejelentkezett felhasználó admin jogainak ellenőrzése.
+        /// </summary>
+        /// <returns>204-es állapotkódot ha a jelenleg bejelentkezett felhasználó rendelkezik admin jogokkal, különben 403-as állapotkódot.</returns>
+        /// <response code="204">A jelenleg bejelentkezett felhasználó rendelkezik admin jogokkal.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpGet]
+        [Route("admin/check")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [Authorize]
+        public async Task<ActionResult> IsAdmin()
+        {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            return user.IsAdmin ? NoContent() : Forbid();
+        }
+
+        /// <summary>
         /// Új láda létrehozása. (Admin jog szükséges)
         /// </summary>
         /// <param name="details">A láda leírása.</param>
@@ -1220,6 +1045,217 @@ namespace csgo.Controllers
             await context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        /// <summary>
+        /// Az összes létező tárgy adatainak lekérdezése. (Admin jog szükséges)
+        /// </summary>
+        /// <returns>Egy listát, ami tartalmazza az összes tárgy adatait.</returns>
+        /// <response code="200">Visszaad egy listát, ami tartalmazza az összes tárgy adatait.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpGet]
+        [Route("admin/items")]
+        [ProducesResponseType(typeof(List<ItemResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [Authorize]
+        public async Task<ActionResult<List<ItemResponse>>> GetItems()
+        {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            if (!user.IsAdmin) return Forbid();
+
+            return Ok(await context.Items.Where(x => x.ItemType == ItemType.Item).Select(x => x.ToDto()).ToListAsync());
+        }
+
+        /// <summary>
+        /// Egy létező tárgy törlése (Admin jog szükséges)
+        /// </summary>
+        /// <param name="itemId">A tárgy azonosítója.</param>
+        /// <returns>204 ha sikerült, 404 ha nem található.</returns>
+        /// <response code="204">Sikeres törlés.</response>
+        /// <response code="404">A tárgy nem található.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        [HttpDelete]
+        [Route("admin/items/{itemId:int}")]
+        [Consumes("application/json")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [Authorize]
+        public async Task<ActionResult> DeleteItem(int itemId)
+        {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            if (!user.IsAdmin) return Forbid();
+
+            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId && x.ItemType == ItemType.Item);
+
+            if(item == null) return NotFound();
+
+            var inventories = await context.Userinventories.Where(x => x.ItemId == itemId).ToListAsync();
+
+            foreach (var inventoryItem in inventories)
+            {
+                context.Userinventories.Remove(inventoryItem);
+            }
+
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Az összes létező felhasználó adatainak lekérdezése. (Admin jog szükséges)
+        /// </summary>
+        /// <returns>Egy listát, ami tartalmazza az összes felhasználó adatait.</returns>
+        /// <response code="200">Visszaad egy listát, ami tartalmazza az összes felhasználó adatait.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpGet]
+        [Route("admin/users")]
+        [ProducesResponseType(typeof(List<UserResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [Authorize]
+        public async Task<ActionResult<List<UserResponse>>> GetUsers()
+        {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            if (!user.IsAdmin) return Forbid();
+
+            var users = await context.Users.ToListAsync();
+
+            var userDtos = new List<UserResponse>();
+
+            foreach (var u in users)
+            {
+                var items = await context.Userinventories.Where(x => x.UserId == u.UserId).Select(x => x.Item.ToDto()).ToListAsync();
+                userDtos.Add(u.ToDto(items));
+            }
+
+            return Ok(userDtos);
+        }
+
+        /// <summary>
+        /// Hozzáad egy tárgyat egy felhasználó leltárához. (Admin jog szükséges)
+        /// </summary>
+        /// <param name="userId">A felhasználó azonosítója.</param>
+        /// <param name="itemId">A hozzáadandó tárgy azonosítója.</param>
+        /// <returns>A felhasználó leltárának frissített adatait.</returns>
+        /// <response code="200">Visszaadja a felhasználó leltárának frissített adatait.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        /// <response code="404">A tárgy vagy a felhasználó nem található.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpPost]
+        [Route("admin/users/{userId:int}/inventory/{itemId:int}")]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(CaseResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Authorize]
+        public async Task<ActionResult> AddInventoryItem(int userId, int itemId)
+        {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            if (!user.IsAdmin) return Forbid();
+
+            var target = await context.Users.FirstOrDefaultAsync(x => x.UserId == userId);
+            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId);
+            if (target == null || item == null) return NotFound();
+
+            await context.Userinventories.AddAsync(new Userinventory {
+                UserId = target.UserId,
+                ItemId = item.ItemId
+            });
+            await context.SaveChangesAsync();
+
+            List<InventoryItemResponse> items = await context.Userinventories.Where(x => x.UserId == user.UserId)
+                .Select(x => x.Item.ToInventoryItemDto(x.InventoryId))
+                .ToListAsync();
+            
+            return Ok(items);
+
+        }
+
+        /// <summary>
+        /// Eltávolít egy tárgyat egy felhasználó leltárából. (Admin jog szükséges)
+        /// </summary>
+        /// <param name="userId">A felhasználó azonosítója.</param>
+        /// <param name="itemId">A hozzáadandó tárgy azonosítója.</param>
+        /// <returns>A felhasználó leltárának frissített adatait.</returns>
+        /// <response code="200">Visszaadja a felhasználó leltárának frissített adatait.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        /// <response code="404">A tárgy vagy a felhasználó nem található, vagy a tárgy nincs a felhasználó leltárában.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpDelete]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(CaseResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Route("admin/users/{userId:int}/inventory/{itemId:int}")]
+        [Authorize]
+        public async Task<ActionResult> DeleteInventoryItem(int userId, int itemId)
+        {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            if (!user.IsAdmin) return Forbid();
+
+            var target = await context.Users.FirstOrDefaultAsync(x => x.UserId == userId);
+            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId);
+            if (target == null || item == null) return NotFound();
+
+            var userInventory = await context.Userinventories.FirstOrDefaultAsync(x => x.UserId == target.UserId && x.ItemId == item.ItemId);
+            if (userInventory == null) return NotFound();
+            
+            context.Userinventories.Remove(userInventory);
+            await context.SaveChangesAsync();
+
+            List<InventoryItemResponse> items = await context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId)).ToListAsync();
+            
+            return Ok(items);
+        }
+
+        /// <summary>
+        /// Új tárgy létrehozása. (Admin jog szükséges)
+        /// </summary>
+        /// <param name="details">A tárgy leírása.</param>
+        /// <returns>A tárgy leírását.</returns>
+        /// <response code="200">Visszaadja a tárgy leírását.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpPost]
+        [Route("admin/items")]
+        [ProducesResponseType(typeof(ItemResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [Authorize]
+        public async Task<ActionResult<ItemResponse>> AddItem(ItemRecord details)
+        {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            if (!user.IsAdmin) return Forbid();
+
+
+            Item item = new()
+            {
+                ItemType = ItemType.Item,
+                ItemName = details.Name,
+                ItemDescription = details.Description,
+                ItemRarity = details.Rarity,
+                ItemSkinName = details.SkinName,
+                ItemValue = details.Value
+            };
+            
+            await context.Items.AddAsync(item);
+            await context.SaveChangesAsync();
+
+            return Ok(item.ToDto());
         }
 
         private static (string accessToken, string refreshToken) GenerateTokens(User user)
