@@ -1018,6 +1018,46 @@ namespace csgo.Controllers
         }
 
         /// <summary>
+        /// Létező láda törlése
+        /// </summary>
+        /// <param name="caseId">A láda azonosítója.</param>
+        /// <returns>204 ha sikerült, 404 ha nem található.</returns>
+        /// <response code="204">A törlés sikeres volt.</response>
+        /// <response code="404">A láda nem található.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        [HttpDelete]
+        [Route("admin/cases/{caseId:int}")]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [Authorize]
+        public async Task<ActionResult> DeleteCase(int caseId) {
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            if(!user.IsAdmin) return Forbid();
+
+            var @case = await context.Items.FirstOrDefaultAsync(x => x.ItemId == caseId && x.ItemType == ItemType.Case);
+
+            if (@case == null) return NotFound();
+
+            var inventoryItems = await context.Userinventories.Where(x => x.ItemId == @case.ItemId).ToListAsync();
+
+            foreach (var item in inventoryItems)
+            {
+                context.Userinventories.Remove(item);
+            }
+
+            context.Items.Remove(@case);
+            await context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+
+        /// <summary>
         /// Hozzáad egy tárgyat egy ládához. (Admin jog szükséges)
         /// </summary>
         /// <param name="caseId">A módosítandó láda azonosítója.</param>

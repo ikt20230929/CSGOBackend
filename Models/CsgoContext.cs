@@ -181,7 +181,7 @@ public partial class CsgoContext : DbContext
                 .HasColumnName("login_streak");
             entity.Property(e => e.LastClaimDate)
                 .HasColumnName("last_claim_date")
-                .HasDefaultValueSql("1970-01-01 00:00:00");
+                .HasDefaultValueSql("'1970-01-01 00:00:00'");
             entity.Property(e => e.PasswordHash)
                 .HasMaxLength(255)
                 .HasColumnName("password_hash");
