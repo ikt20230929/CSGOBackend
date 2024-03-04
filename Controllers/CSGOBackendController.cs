@@ -449,7 +449,6 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
         [Consumes("application/json")]
-        [Produces("application/json")]
         [Authorize]
         public async Task<ActionResult<ActionStatus>> DisableTotp(DisableTOTPRequest request) {
             var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
@@ -1029,7 +1028,6 @@ namespace csgo.Controllers
         [HttpDelete]
         [Route("admin/cases/{caseId:int}")]
         [Consumes("application/json")]
-        [Produces("application/json")]
         [ProducesResponseType(typeof(void), StatusCodes.Status204NoContent)]
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
@@ -1182,6 +1180,46 @@ namespace csgo.Controllers
                 GiveawayItem = giveaway.Item!.ItemName,
                 GiveawayName = giveaway.GiveawayName
             });
+        }
+
+        /// <summary>
+        /// Létező nyeremenyjáték törlése
+        /// </summary>
+        /// <param name="giveawayId">A nyereményjáték azonosítója.</param>
+        /// <returns>204 ha sikerült, 404 ha nem található.</returns>
+        /// <response code="204">Sikeres törlés.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        /// <response code="404">A megadott nyereményjáték nem található.</response>
+        [HttpDelete]
+        [Route("admin/giveaways/{giveawayId:int}")]
+        [Consumes("application/json")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [Authorize]
+        public async Task<ActionResult> DeleteGiveaway(int giveawayId)
+        {
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            if(!user.IsAdmin) return Forbid();
+
+            var giveaway = await context.Giveaways.FindAsync(giveawayId);
+
+            if(giveaway == null) return NotFound();
+
+            var participants = await context.Users.Include(x => x.Giveaways).Where(x => x.Giveaways.Contains(giveaway)).ToListAsync();
+
+            foreach (var item in participants)
+            {
+                item.Giveaways.Remove(giveaway);
+            }
+
+            context.Giveaways.Remove(giveaway);
+
+            await context.SaveChangesAsync();
+
+            return NoContent();
         }
 
         private static (string accessToken, string refreshToken) GenerateTokens(User user)
