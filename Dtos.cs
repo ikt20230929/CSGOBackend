@@ -145,6 +145,11 @@ namespace csgo
             /// A tárgy képének URL-je
             /// </summary>
             [Required][JsonPropertyName("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
+
+            /// <summary>
+            /// A tárgy típusa
+            /// </summary>
+            [Required][JsonPropertyName("itemType")] public ItemType ItemType { get; init; }
         }
 
         /// <summary>
@@ -339,6 +344,11 @@ namespace csgo
             /// A tárgy képének URL-je
             /// </summary>
             [Required][JsonPropertyName("itemAssetUrl")] public string? ItemAssetUrl { get; init; }
+
+            /// <summary>
+            /// A tárgy típusa
+            /// </summary>
+            [Required][JsonPropertyName("itemType")] public ItemType ItemType { get; init; }
         }
     }
 }

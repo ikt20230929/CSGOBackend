@@ -22,7 +22,8 @@ namespace csgo
               ItemRarity = item.ItemRarity,
               ItemSkinName = item.ItemSkinName!,
               ItemValue = (decimal)item.ItemValue!,
-              ItemAssetUrl = item.ItemAssetUrl
+              ItemAssetUrl = item.ItemAssetUrl,
+              ItemType = item.ItemType
           };
         }
         
@@ -39,7 +40,8 @@ namespace csgo
                 ItemRarity = item.ItemRarity,
                 ItemSkinName = item.ItemSkinName!,
                 ItemValue = (decimal)item.ItemValue!,
-                ItemAssetUrl = item.ItemAssetUrl
+                ItemAssetUrl = item.ItemAssetUrl,
+                ItemType = item.ItemType
             };
         }
 
