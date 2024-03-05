@@ -564,6 +564,24 @@ namespace csgo.Controllers
         }
 
         /// <summary>
+        /// Az összes létező tárgy adatainak lekérdezése.
+        /// </summary>
+        /// <returns>Egy listát, ami tartalmazza az összes tárgy adatait.</returns>
+        /// <response code="200">Visszaad egy listát, ami tartalmazza az összes tárgy adatait.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpGet]
+        [Route("items")]
+        [ProducesResponseType(typeof(List<ItemResponse>), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [Authorize]
+        public async Task<ActionResult<List<ItemResponse>>> GetItems()
+        {
+            return Ok(await context.Items.Where(x => x.ItemType == ItemType.Item).Select(x => x.ToDto()).ToListAsync());
+        }
+
+        /// <summary>
         /// Egy tárgy továbbfejlesztésének esélyének lekérdezése.
         /// </summary>
         /// <param name="from">Az tárgy leltárazonosítója.</param>
@@ -1045,29 +1063,6 @@ namespace csgo.Controllers
             await context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        /// <summary>
-        /// Az összes létező tárgy adatainak lekérdezése. (Admin jog szükséges)
-        /// </summary>
-        /// <returns>Egy listát, ami tartalmazza az összes tárgy adatait.</returns>
-        /// <response code="200">Visszaad egy listát, ami tartalmazza az összes tárgy adatait.</response>
-        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal.</response>
-        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
-        [HttpGet]
-        [Route("admin/items")]
-        [ProducesResponseType(typeof(List<ItemResponse>), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
-        [Consumes("application/json")]
-        [Produces("application/json")]
-        [Authorize]
-        public async Task<ActionResult<List<ItemResponse>>> GetItems()
-        {
-            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            if (!user.IsAdmin) return Forbid();
-
-            return Ok(await context.Items.Where(x => x.ItemType == ItemType.Item).Select(x => x.ToDto()).ToListAsync());
         }
 
         /// <summary>
