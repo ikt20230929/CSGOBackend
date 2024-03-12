@@ -860,7 +860,7 @@ namespace csgo.Controllers
         }
 
         /// <summary>
-        /// Létező láda törlése
+        /// Létező láda törlése (Admin jog szükséges)
         /// </summary>
         /// <param name="caseId">A láda azonosítója.</param>
         /// <returns>204 ha sikerült, 404 ha nem található.</returns>
@@ -897,6 +897,42 @@ namespace csgo.Controllers
             return NoContent();
         }
 
+        /// <summary>
+        /// Létező láda módosítása (Admin jog szükséges)
+        /// </summary>
+        /// <param name="caseId">A módosítandó láda azonosítója.</param>
+        /// <param name="details">A láda új adatai.</param>
+        /// <returns>A láda frissített adatait.</returns>
+        /// <response code="200">Visszaadja a láda frissített adatait.</response>
+        /// <response code="404">A láda nem található.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpPut]
+        [Route("admin/cases/{caseId:int}")]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(CaseResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Authorize]
+        public async Task<ActionResult> UpdateCase(int caseId, CaseRecord details)
+        {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            if (!user.IsAdmin) return Forbid();
+
+            var @case = await context.Items.FirstOrDefaultAsync(x => x.ItemId == caseId && x.ItemType == ItemType.Case);
+            if (@case == null) return NotFound();
+
+            @case.ItemName = details.Name;
+            @case.ItemValue = details.Value;
+
+            await context.SaveChangesAsync();
+
+            var caseItems = await context.CaseItems.Where(x => x.Case == @case).Select(x => x.Item.ToDto()).ToListAsync();
+
+            return Ok(@case.ToCaseDto(caseItems));
+        }
 
         /// <summary>
         /// Hozzáad egy tárgyat egy ládához. (Admin jog szükséges)
@@ -1026,7 +1062,7 @@ namespace csgo.Controllers
         }
 
         /// <summary>
-        /// Létező nyeremenyjáték törlése
+        /// Létező nyeremenyjáték törlése (Admin jog szükséges)
         /// </summary>
         /// <param name="giveawayId">A nyereményjáték azonosítója.</param>
         /// <returns>204 ha sikerült, 404 ha nem található.</returns>
@@ -1063,6 +1099,97 @@ namespace csgo.Controllers
             await context.SaveChangesAsync();
 
             return NoContent();
+        }
+
+        /// <summary>
+        /// Létező nyereményjáték adatainak módosítása. (Admin jog szükséges)
+        /// </summary>
+        /// <param name="giveawayId">A nyereményjáték azonosítója.</param>
+        /// <param name="details">A nyereményjáték új adatai.</param>
+        /// <returns>A nyereményjáték új adatait.</returns>
+        /// <response code="200">Visszaadja a nyereményjáték új adatait.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        /// <response code="404">A megadott nyereményjáték nem található.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        /// <response code="409">A nyereményjáték már lefutott.</response>
+        /// <response code="400">A megadott dátum nem lehet a multban.</response>
+        [HttpPut]
+        [Route("admin/giveaways/{giveawayId:int}")]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(CurrentGiveawayResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status400BadRequest)]
+        [Authorize]
+        public async Task<ActionResult<CurrentGiveawayResponse>> UpdateGiveaway(int giveawayId, GiveawayRecord details)
+        {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            if (!user.IsAdmin) return Forbid();
+
+            var giveaway = await context.Giveaways.FindAsync(giveawayId);
+            if (giveaway == null) return NotFound();
+            if (giveaway.GiveawayDate < DateTime.Now) return Conflict();
+            if (details.Date < DateTime.Now) return BadRequest();
+
+            var item = await context.Items.FindAsync(details.ItemId);
+            if (item == null) return NotFound();
+
+            giveaway.GiveawayDate = details.Date.ToLocalTime();
+            giveaway.GiveawayDescription = details.Description;
+            giveaway.GiveawayName = details.Name;
+            giveaway.ItemId = item.ItemId;
+
+            await context.SaveChangesAsync();
+
+            return Ok(new CurrentGiveawayResponse
+            {
+                GiveawayDate = giveaway.GiveawayDate,
+                GiveawayDescription = giveaway.GiveawayDescription,
+                GiveawayId = giveaway.GiveawayId,
+                GiveawayItem = giveaway.Item!.ItemName,
+                GiveawayName = giveaway.GiveawayName
+            });
+        }
+
+        /// <summary>
+        /// Új tárgy létrehozása. (Admin jog szükséges)
+        /// </summary>
+        /// <param name="details">A tárgy leírása.</param>
+        /// <returns>A tárgy leírását.</returns>
+        /// <response code="200">Visszaadja a tárgy leírását.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpPost]
+        [Route("admin/items")]
+        [ProducesResponseType(typeof(ItemResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [Authorize]
+        public async Task<ActionResult<ItemResponse>> AddItem(ItemRecord details)
+        {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            if (!user.IsAdmin) return Forbid();
+
+
+            Item item = new()
+            {
+                ItemType = ItemType.Item,
+                ItemName = details.Name,
+                ItemDescription = details.Description,
+                ItemRarity = details.Rarity,
+                ItemSkinName = details.SkinName,
+                ItemValue = details.Value
+            };
+            
+            await context.Items.AddAsync(item);
+            await context.SaveChangesAsync();
+
+            return Ok(item.ToDto());
         }
 
         /// <summary>
@@ -1132,6 +1259,48 @@ namespace csgo.Controllers
             }
 
             return Ok(userDtos);
+        }
+
+        /// <summary>
+        /// Egy létező felhasználó adatainak módosítása (Admin jog szükséges)
+        /// </summary>
+        /// <param name="userId">A felhasználó azonosítója.</param>
+        /// <param name="details">A felhasználó új adatai.</param>
+        /// <returns>A felhasználó új adatait.</returns>
+        /// <response code="200">Visszaadja a felhasználó új adatait.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal.</response>
+        /// <response code="404">A felhasználó nem található.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        /// <response code="409">A megadott adatok ütköznek egy másik meglévő felhasználónak adataival. (A válasz tartalmazza az ütközés pontos leírását)</response>
+        [HttpPut]
+        [Route("admin/users/{userId:int}")]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(ActionResult), StatusCodes.Status409Conflict)]
+        [Authorize]
+        public async Task<ActionResult<UserResponse>> UpdateUser(int userId, UserEditRecord details)
+        {
+            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            if (!user.IsAdmin) return Forbid();
+
+            var target = await context.Users.FirstOrDefaultAsync(x => x.UserId == userId);
+            if (target == null) return NotFound();
+
+            if (await context.Users.AnyAsync(x => x.Username == details.Username && x.UserId != userId)) return Conflict(new { Status = "ERR", Message = "A megadott felhasználónév már foglalt." });
+            if (await context.Users.AnyAsync(x => x.Email == details.Email && x.UserId != userId)) return Conflict(new { Status = "ERR", Message = "Az megadott e-mail már használatban van." });
+
+            target.Username = details.Username;
+            target.Email = details.Email;
+            target.Balance = details.Balance;
+
+            await context.SaveChangesAsync();
+
+            var items = await context.Userinventories.Where(x => x.UserId == target.UserId).Select(x => x.Item.ToDto()).ToListAsync();
+            return Ok(target.ToDto(items));
         }
 
         /// <summary>
@@ -1216,38 +1385,38 @@ namespace csgo.Controllers
         }
 
         /// <summary>
-        /// Új tárgy létrehozása. (Admin jog szükséges)
+        /// Létező tárgy módosítása (Admin jog szükséges)
         /// </summary>
-        /// <param name="details">A tárgy leírása.</param>
-        /// <returns>A tárgy leírását.</returns>
-        /// <response code="200">Visszaadja a tárgy leírását.</response>
+        /// <param name="itemId">A módosítandó tárgy azonosítója.</param>
+        /// <param name="details">A tárgy új adatai.</param>
+        /// <returns>A tárgy frissített adatait.</returns>
+        /// <response code="200">Visszaadja a tárgy frissített adatait.</response>
         /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        /// <response code="404">A tárgy nem található.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
-        [HttpPost]
-        [Route("admin/items")]
-        [ProducesResponseType(typeof(ItemResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [HttpPut]
+        [Route("admin/items/{itemId:int}")]
         [Consumes("application/json")]
         [Produces("application/json")]
+        [ProducesResponseType(typeof(ItemResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Authorize]
-        public async Task<ActionResult<ItemResponse>> AddItem(ItemRecord details)
+        public async Task<ActionResult> UpdateItem(int itemId, ItemRecord details)
         {
             User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
+            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId && x.ItemType == ItemType.Item);
+            if (item == null) return NotFound();
 
-            Item item = new()
-            {
-                ItemType = ItemType.Item,
-                ItemName = details.Name,
-                ItemDescription = details.Description,
-                ItemRarity = details.Rarity,
-                ItemSkinName = details.SkinName,
-                ItemValue = details.Value
-            };
-            
-            await context.Items.AddAsync(item);
+            item.ItemName = details.Name;
+            item.ItemDescription = details.Description;
+            item.ItemRarity = details.Rarity;
+            item.ItemSkinName = details.SkinName;
+            item.ItemValue = details.Value;
+
             await context.SaveChangesAsync();
 
             return Ok(item.ToDto());

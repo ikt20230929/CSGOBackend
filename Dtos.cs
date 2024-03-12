@@ -76,6 +76,18 @@ namespace csgo
         /// <param name="Date">A nyereményjáték kezdetének ideje</param>
         /// <param name="ItemId">A nyereményjátékban nyerhető tárgy azonosítója</param>
         public record GiveawayRecord([Required] string Name, [Required] string Description, [Required] DateTime Date, [Required] int ItemId);
+
+        /// <summary>
+        /// Egy felhasználó leírása (csak módosítható attribútumok)
+        /// </summary>
+        /// <param name="Username">A felhasználó felhasznaloneve</param>
+        /// <param name="Email">A felhasználó email címe</param>
+        /// <param name="Balance">A felhasználó egyenlege</param>
+        public record UserEditRecord(
+            [Required] string Username,
+            [Required] string Email,
+            [Required] double Balance);
+        
         
         /// <summary>
         /// Egy állapot üzenet leírása
