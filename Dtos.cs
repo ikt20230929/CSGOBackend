@@ -280,6 +280,11 @@ namespace csgo
             /// A nyereményjátékban nyerhető tárgy azonosítója
             /// </summary>
             [Required][JsonPropertyName("giveawayItem")] public string? GiveawayItem { get; init; }
+
+            /// <summary>
+            /// Megadja, hogy a jelenlegi felhasználó részt vesz e a nyereményjátékban
+            /// </summary>
+            [Required][JsonPropertyName("giveawayJoined")] public bool GiveawayJoined { get; init; }
         }
 
         /// <summary>

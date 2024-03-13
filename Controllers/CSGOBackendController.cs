@@ -756,8 +756,10 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<List<CurrentGiveawayResponse>>> GetGiveaways()
         {
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+
             // Nyereményjátékok, amelyek még nem futottak le.
-            var giveaways = await context.Giveaways.Where(x => x.GiveawayDate > DateTime.Now).Include(x => x.Item).ToListAsync();
+            var giveaways = await context.Giveaways.Where(x => x.GiveawayDate > DateTime.Now).Include(x => x.Item).Include(x => x.Users).ToListAsync();
 
             var mapped = giveaways.Select(giveaway => new CurrentGiveawayResponse
             {
@@ -765,7 +767,8 @@ namespace csgo.Controllers
                 GiveawayName = giveaway.GiveawayName,
                 GiveawayDescription = giveaway.GiveawayDescription!,
                 GiveawayDate = giveaway.GiveawayDate,
-                GiveawayItem = giveaway.Item!.ItemName
+                GiveawayItem = giveaway.Item!.ItemName,
+                GiveawayJoined = giveaway.Users.Contains(user)
             }).ToList();
 
             return Ok(mapped);
