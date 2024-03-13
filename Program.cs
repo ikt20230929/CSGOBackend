@@ -40,7 +40,6 @@ namespace csgo
                     ValidIssuer = Globals.Config.BackUrl,
                     ValidAudience = Globals.Config.BackUrl,
                     IssuerSigningKey = Signing.AccessTokenKey,
-                    RoleClaimType = "role",
                     NameClaimType = "name"
                 };
             });

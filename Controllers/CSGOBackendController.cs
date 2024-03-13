@@ -1409,8 +1409,7 @@ namespace csgo.Controllers
             var claims = new List<Claim>
             {
                 new("name", user.Username),
-                new("email", user.Email),
-                new("role", user.IsAdmin ? "admin" : "user")
+                new("email", user.Email)
             };
 
             // Access token létrehozása
