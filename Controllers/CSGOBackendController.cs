@@ -807,27 +807,6 @@ namespace csgo.Controllers
         }
 
         /// <summary>
-        /// A jelenleg bejelentkezett felhasználó admin jogainak ellenőrzése.
-        /// </summary>
-        /// <returns>204-es állapotkódot ha a jelenleg bejelentkezett felhasználó rendelkezik admin jogokkal, különben 403-as állapotkódot.</returns>
-        /// <response code="204">A jelenleg bejelentkezett felhasználó rendelkezik admin jogokkal.</response>
-        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal.</response>
-        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
-        [HttpGet]
-        [Route("admin/check")]
-        [ProducesResponseType(typeof(void), StatusCodes.Status204NoContent)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
-        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
-        [Consumes("application/json")]
-        [Produces("application/json")]
-        [Authorize]
-        public async Task<ActionResult> IsAdmin()
-        {
-            User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            return user.IsAdmin ? NoContent() : Forbid();
-        }
-
-        /// <summary>
         /// Új láda létrehozása. (Admin jog szükséges)
         /// </summary>
         /// <param name="details">A láda leírása.</param>
