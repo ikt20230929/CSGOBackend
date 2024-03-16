@@ -511,7 +511,7 @@ namespace csgo.Controllers
         /// <returns>A megszerzett tárgy adatait.</returns>
         /// <response code="200">Visszaadja a megszerzett tárgy adatait.</response>
         /// <response code="404">A megadott láda nem létezik.</response>
-        /// <response code="403">A jelenleg bejelentkezett felhasználónak a leltárában nem található az adott láda.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználónak nincs elég egyenlege a láda kinyitásához.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpPost]
         [Route("open_case/{caseId}")]
@@ -529,38 +529,35 @@ namespace csgo.Controllers
             var @case = await context.Items.FirstOrDefaultAsync(x => x.ItemType == ItemType.Case && x.ItemId == caseId);
             if(@case == null) return NotFound();
 
-            var userInventory = await context.Userinventories.Where(x => x.UserId == user.UserId).Include(x => x.Item).ToListAsync();
-            var userCase = userInventory.Find(x => x.Item == @case);
+            if((decimal)user.Balance < @case.ItemValue) return Forbid();
+            
+            var ctxCaseItems = await context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).ToArrayAsync();
 
-            if (userCase == null) return Forbid();
+            var weights = new Dictionary<Item, double>();
+            foreach (var item in ctxCaseItems)
             {
-                var ctxCaseItems = await context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).ToArrayAsync();
-
-                var weights = new Dictionary<Item, double>();
-                foreach (var item in ctxCaseItems)
-                {
-                    double rarityWeight = rarityWeights[item.Item.ItemRarity];
-                    var valueWeight = (double)item.Item.ItemValue! / (double)@case.ItemValue!;
-                    var totalWeight = rarityWeight * valueWeight;
-                    weights[item.Item] = totalWeight;
-                }
-
-                var itemList = ctxCaseItems.Select(item => new WeightedListItem<Item>(item.Item, (int)weights[item.Item])).ToList();
-
-                var caseItems = new WeightedList<Item>(itemList);
-                var resultItem = caseItems.Next();
-
-                context.Userinventories.Remove(userCase);
-                await context.Userinventories.AddAsync(new Userinventory
-                {
-                    ItemId = resultItem.ItemId,
-                    UserId = user.UserId
-                });
-                
-                await context.SaveChangesAsync();
-
-                return Ok(resultItem.ToDto());
+                double rarityWeight = rarityWeights[item.Item.ItemRarity];
+                var valueWeight = (double)item.Item.ItemValue! / (double)@case.ItemValue!;
+                var totalWeight = rarityWeight * valueWeight;
+                weights[item.Item] = totalWeight;
             }
+
+            var itemList = ctxCaseItems.Select(item => new WeightedListItem<Item>(item.Item, (int)weights[item.Item])).ToList();
+
+            var caseItems = new WeightedList<Item>(itemList);
+            var resultItem = caseItems.Next();
+
+            await context.Userinventories.AddAsync(new Userinventory
+            {
+                ItemId = resultItem.ItemId,
+                UserId = user.UserId
+            });
+
+            user.Balance -= Convert.ToDouble(@case.ItemValue);
+            
+            await context.SaveChangesAsync();
+
+            return Ok(resultItem.ToDto());
         }
 
         /// <summary>
@@ -1310,7 +1307,7 @@ namespace csgo.Controllers
             if (!user.IsAdmin) return Forbid();
 
             var target = await context.Users.FirstOrDefaultAsync(x => x.UserId == userId);
-            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId);
+            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId && x.ItemType == ItemType.Item);
             if (target == null || item == null) return NotFound();
 
             await context.Userinventories.AddAsync(new Userinventory {
@@ -1352,7 +1349,7 @@ namespace csgo.Controllers
             if (!user.IsAdmin) return Forbid();
 
             var target = await context.Users.FirstOrDefaultAsync(x => x.UserId == userId);
-            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId);
+            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId && x.ItemType == ItemType.Item);
             if (target == null || item == null) return NotFound();
 
             var userInventory = await context.Userinventories.FirstOrDefaultAsync(x => x.UserId == target.UserId && x.ItemId == item.ItemId);
