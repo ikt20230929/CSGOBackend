@@ -579,6 +579,35 @@ namespace csgo.Controllers
         }
 
         /// <summary>
+        /// Egy tárgy eladása.
+        /// </summary>
+        /// <param name="inventoryId">A tárgy leltárazonosítója.</param>
+        /// <returns>204 ha sikerült, 404 ha nem található.</returns>
+        /// <response code="204">A tárgy eladása sikeres volt.</response>
+        /// <response code="404">A megadott tárgy nem található.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpPost]
+        [Route("sell_item/{inventoryId:int}")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Produces("application/json")]
+        [Authorize]
+        public async Task<ActionResult<ActionStatus>> SellItem(int inventoryId)
+        {
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+
+            var inventoryItem = await context.Userinventories.Include(x => x.Item).FirstOrDefaultAsync(x => x.InventoryId == inventoryId && x.UserId == user.UserId);
+            if(inventoryItem == null) return NotFound();
+
+            user.Balance += Convert.ToDouble(inventoryItem.Item.ItemValue);
+            context.Userinventories.Remove(inventoryItem);
+            await context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        /// <summary>
         /// Egy tárgy továbbfejlesztésének esélyének lekérdezése.
         /// </summary>
         /// <param name="from">Az tárgy leltárazonosítója.</param>
