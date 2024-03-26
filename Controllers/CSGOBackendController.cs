@@ -606,56 +606,59 @@ namespace csgo.Controllers
 
             return NoContent();
         }
-
+        
         /// <summary>
-        /// Egy tárgy továbbfejlesztésének esélyének lekérdezése.
+        /// Visszaad egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgyat.
         /// </summary>
         /// <param name="from">Az tárgy leltárazonosítója.</param>
-        /// <param name="multiplier">A szorzó érték.</param>
-        /// <returns>Visszaadja a fejleszett tárgya továbbfejlesztésének esélyét.</returns>
-        /// <response code="200">Visszaadja a fejleszett tárgy továbbfejlesztésének esélyét.</response>
+        /// <param name="multiplier">A minimum szorzó érték.</param>
+        /// <returns>Egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgyat.</returns>
+        /// <response code="200">Visszaad egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgyat.</response>
         /// <response code="404">Nem található a megadott tárgy.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        /// <response code="409">A megadott tárgy nem fejleszthető tovább.</response>
         [HttpGet]
-        [Route("items/upgrade/{from:int}/{multiplier:int}")]
-        [ProducesResponseType(typeof(OkObjectResult), StatusCodes.Status200OK)]
+        [Route("items/upgrades/{from:int}/{multiplier:int}")]
+        [ProducesResponseType(typeof(ActionStatus), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
         [Authorize]
-        public async Task<ActionResult<ActionStatus>> GetUpgradeChance(int from, int multiplier) {
+        public async Task<ActionResult<ActionStatus>> GetUpgradeItems(int from, int multiplier) {
             User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
             Userinventory? inventoryItem = await context.Userinventories.Include(x => x.Item).FirstOrDefaultAsync(x => x.InventoryId == from && x.UserId == user.UserId);
 
             if(inventoryItem == null) return NotFound();
 
-            var nextItemValue = inventoryItem.Item.ItemValue * multiplier;
-            var nextItem = await context.Items.Where(x => x.ItemValue >= nextItemValue && x.ItemRarity >= inventoryItem.Item.ItemRarity).OrderBy(x => x.ItemValue).FirstOrDefaultAsync();
-            if(nextItem == null) return NotFound();
-
             InventoryItemResponse itemData = inventoryItem.Item.ToInventoryItemDto(inventoryItem.InventoryId);
 
-            var chance = GetItemUpgradeSuccessChance(itemData, nextItem);
+            var upgradeItems = await context.Items
+                .Where(x => x.ItemValue >= inventoryItem.Item.ItemValue * multiplier && x.ItemRarity >= inventoryItem.Item.ItemRarity)
+                .OrderBy(x => x.ItemValue)
+                .ToListAsync();
 
-            return Ok(new { Status = "OK", Chance = chance, NextItem = nextItem.ToDto() });
+            if (upgradeItems.Count == 0) return Conflict();
+
+            return Ok(new { Status = "OK", Items = upgradeItems.Where(y => GetItemUpgradeSuccessChance(itemData, y) > 0).Select(x => new { Item = x.ToDto(), Chance = GetItemUpgradeSuccessChance(itemData, x), Multiplier = Math.Round((decimal)x.ItemValue! / itemData.ItemValue, 2) }) });
         }
 
         /// <summary>
         /// Egy tárgy továbbfejlesztése
         /// </summary>
         /// <param name="from">Az első tárgy leltárazonosítója.</param>
-        /// <param name="multiplier">A szorzó érték.</param>
+        /// <param name="to">Az második tárgy azonosítója.</param>
         /// <returns>Visszaadja a fejleszett tárgya adatait ha sikerült, különben null.</returns>
         /// <response code="200">Visszaadja a fejlesztett tárgy adatait ha sikerült, különben null.</response>
         /// <response code="404">Nem találhato a megadott tárgy.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpPost]
-        [Route("items/upgrade/{from:int}/{multiplier:int}")]
+        [Route("items/upgrade/{from:int}/{to:int}")]
         [ProducesResponseType(typeof(ItemUpgradeResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Authorize]
-        public async Task<ActionResult<ItemUpgradeResponse>> UpgradeItem(int from, int multiplier) {
+        public async Task<ActionResult<ItemUpgradeResponse>> UpgradeItem(int from, int to) {
             User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
             Userinventory? inventoryItem = await context.Userinventories.Include(x => x.Item).FirstOrDefaultAsync(x => x.InventoryId == from && x.UserId == user.UserId);
@@ -664,8 +667,7 @@ namespace csgo.Controllers
 
             InventoryItemResponse itemData = inventoryItem.Item.ToInventoryItemDto(inventoryItem.InventoryId);
 
-            var nextItemValue = inventoryItem.Item.ItemValue * multiplier;
-            var nextItem = await context.Items.Where(x => x.ItemValue >= nextItemValue && x.ItemRarity >= inventoryItem.Item.ItemRarity).OrderBy(x => x.ItemValue).FirstOrDefaultAsync();
+            var nextItem = await context.Items.FirstOrDefaultAsync(x => x.ItemId == to && x.ItemType == ItemType.Item);
             if(nextItem == null) return NotFound();
 
             var chance = GetItemUpgradeSuccessChance(itemData, nextItem);
