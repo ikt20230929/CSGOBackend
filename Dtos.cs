@@ -90,6 +90,21 @@ namespace csgo
         
         
         /// <summary>
+        /// Egy tárgy továbbfejlesztési útjainak lekérdezése
+        /// </summary>
+        /// <param name="Items">A fejlesztendő tárgy(ak) azonosítója(i)</param>
+        /// <param name="Multiplier">A fejlesztéshez használt szorzó</param>
+        public record ItemUpgradeListRequest([Required] List<int> Items, [Required] int Multiplier);
+
+        /// <summary>
+        /// Egy tárgy feljesztési kérelem
+        /// </summary>
+        /// <param name="Items">A fejlesztendő tárgy(ak) azonosítója(i)</param>
+        /// <param name="Multiplier">A fejlesztéshez használt szorzó</param>
+        /// <param name="Target">A második tárgy (lehet nulla)</param>
+        public record ItemUpgradeRequest([Required] List<int> Items, [Required] int Multiplier, [Required] int Target);
+
+        /// <summary>
         /// Egy állapot üzenet leírása
         /// </summary>
         public record ActionStatus {

@@ -608,72 +608,76 @@ namespace csgo.Controllers
         }
         
         /// <summary>
-        /// Visszaad egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgyat.
+        /// Visszaad egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgy(akat).
         /// </summary>
-        /// <param name="from">Az tárgy leltárazonosítója.</param>
-        /// <param name="multiplier">A minimum szorzó érték.</param>
+        /// <param name="request">A tárgy(ak) leltárazonosítójai, és a szorzó.</param>
         /// <returns>Egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgyat.</returns>
         /// <response code="200">Visszaad egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgyat.</response>
         /// <response code="404">Nem található a megadott tárgy.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         /// <response code="409">A megadott tárgy nem fejleszthető tovább.</response>
-        [HttpGet]
-        [Route("items/upgrades/{from:int}/{multiplier:int}")]
+        [HttpPost]
+        [Route("items/upgrades")]
         [ProducesResponseType(typeof(ActionStatus), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
         [Authorize]
-        public async Task<ActionResult<ActionStatus>> GetUpgradeItems(int from, int multiplier) {
+        public async Task<ActionResult<ActionStatus>> GetUpgradeItems(ItemUpgradeListRequest request) {
             User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
-            Userinventory? inventoryItem = await context.Userinventories.Include(x => x.Item).FirstOrDefaultAsync(x => x.InventoryId == from && x.UserId == user.UserId);
+            foreach (var item in request.Items) {
+                if(!await context.Userinventories.AnyAsync(x => x.InventoryId == item && x.UserId == user.UserId)) return NotFound();
+            }
 
-            if(inventoryItem == null) return NotFound();
+            List<InventoryItemResponse> itemData = request.Items.Select(x => context.Userinventories.Include(y => y.Item).First(y => y.InventoryId == x).Item.ToInventoryItemDto(x)).ToList();
 
-            InventoryItemResponse itemData = inventoryItem.Item.ToInventoryItemDto(inventoryItem.InventoryId);
+            var totalValue = itemData.Sum(x => x.ItemValue);
 
             var upgradeItems = await context.Items
-                .Where(x => x.ItemValue >= inventoryItem.Item.ItemValue * multiplier && x.ItemRarity >= inventoryItem.Item.ItemRarity)
+                .Where(x => x.ItemValue >= totalValue && x.ItemType == ItemType.Item)
                 .OrderBy(x => x.ItemValue)
                 .ToListAsync();
 
             if (upgradeItems.Count == 0) return Conflict();
 
-            return Ok(new { Status = "OK", Items = upgradeItems.Where(y => GetItemUpgradeSuccessChance(itemData, y) > 0).Select(x => new { Item = x.ToDto(), Chance = GetItemUpgradeSuccessChance(itemData, x), Multiplier = Math.Round((decimal)x.ItemValue! / itemData.ItemValue, 2) }) });
+            return Ok(new { Status = "OK", TotalValue = totalValue, Items = upgradeItems.Where(y => GetItemUpgradeSuccessChance(totalValue, y) > 0).Select(x => new { Item = x.ToDto(), Chance = GetItemUpgradeSuccessChance(totalValue, x), Multiplier = Math.Round((decimal)x.ItemValue! / totalValue, 2) }) });
         }
 
         /// <summary>
         /// Egy tárgy továbbfejlesztése
         /// </summary>
-        /// <param name="from">Az első tárgy leltárazonosítója.</param>
-        /// <param name="to">Az második tárgy azonosítója.</param>
+        /// <param name="request">A tárgy(ak) leltárazonosítójai, a kért tárgy azonosítója, és a szorzó.</param>
         /// <returns>Visszaadja a fejleszett tárgya adatait ha sikerült, különben null.</returns>
         /// <response code="200">Visszaadja a fejlesztett tárgy adatait ha sikerült, különben null.</response>
         /// <response code="404">Nem találhato a megadott tárgy.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
         [HttpPost]
-        [Route("items/upgrade/{from:int}/{to:int}")]
+        [Route("items/upgrade")]
         [ProducesResponseType(typeof(ItemUpgradeResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Authorize]
-        public async Task<ActionResult<ItemUpgradeResponse>> UpgradeItem(int from, int to) {
+        public async Task<ActionResult<ItemUpgradeResponse>> UpgradeItem(ItemUpgradeRequest request) {
             User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
-            Userinventory? inventoryItem = await context.Userinventories.Include(x => x.Item).FirstOrDefaultAsync(x => x.InventoryId == from && x.UserId == user.UserId);
+            foreach (var item in request.Items) {
+                if(!await context.Userinventories.AnyAsync(x => x.InventoryId == item && x.UserId == user.UserId)) return NotFound();
+            }
 
-            if(inventoryItem == null) return NotFound();
+            List<InventoryItemResponse> itemData = request.Items.Select(x => context.Userinventories.Include(y => y.Item).First(y => y.InventoryId == x).Item.ToInventoryItemDto(x)).ToList();
 
-            InventoryItemResponse itemData = inventoryItem.Item.ToInventoryItemDto(inventoryItem.InventoryId);
-
-            var nextItem = await context.Items.FirstOrDefaultAsync(x => x.ItemId == to && x.ItemType == ItemType.Item);
+            var nextItem = await context.Items.FirstOrDefaultAsync(x => x.ItemId == request.Target && x.ItemType == ItemType.Item);
             if(nextItem == null) return NotFound();
 
-            var chance = GetItemUpgradeSuccessChance(itemData, nextItem);
+            var totalValue = itemData.Sum(x => x.ItemValue);
+
+            var chance = GetItemUpgradeSuccessChance(totalValue, nextItem);
 
             if(GetRandomDouble() < chance) {
-                context.Userinventories.Remove(inventoryItem);
+                foreach (var item in itemData) {
+                    context.Userinventories.Remove(await context.Userinventories.FirstAsync(x => x.InventoryId == item.InventoryId));
+                }
                 await context.Userinventories.AddAsync(new Userinventory {
                     ItemId = nextItem.ItemId,
                     UserId = user.UserId
@@ -685,7 +689,9 @@ namespace csgo.Controllers
                     Item = nextItem.ToDto()
                 });
             } else {
-                context.Userinventories.Remove(inventoryItem);
+                foreach (var item in itemData) {
+                    context.Userinventories.Remove(await context.Userinventories.FirstAsync(x => x.InventoryId == item.InventoryId));
+                }
                 await context.SaveChangesAsync();
                 
                 return Ok(new ItemUpgradeResponse {
@@ -1476,21 +1482,17 @@ namespace csgo.Controllers
 
         }
 
-        private double GetItemUpgradeSuccessChance(InventoryItemResponse currentItem, Item nextItem)
+        private double GetItemUpgradeSuccessChance(decimal currentValue, Item nextItem)
         {
-            var current = context.Items.Find(currentItem.ItemId);
             var next = context.Items.Find(nextItem.ItemId);
 
             // Alap esély
             double baseChance = 0.8;
 
-            // Ritkaság szerinti esély
-            double rarityMultiplier = 0.05 * Math.Abs(next!.ItemRarity - current!.ItemRarity);
-
             // Érték szerinti esély
-            double valueMultiplier = 0.05 * Math.Abs((double)(next.ItemValue - current.ItemValue)!) / 10;
+            double valueMultiplier = 0.05 * Math.Abs((double)(next!.ItemValue - currentValue)!) / 10;
 
-            double successChance = Math.Max(0, Math.Min(1, Math.Round(baseChance - rarityMultiplier - valueMultiplier, 2)));
+            double successChance = Math.Max(0, Math.Min(1, Math.Round(baseChance - valueMultiplier, 2)));
 
             return successChance;
         }
