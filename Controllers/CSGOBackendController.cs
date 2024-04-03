@@ -521,15 +521,15 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Consumes("application/json")]
         [Produces("application/json")]
-        //[Authorize]
+        [Authorize]
         public async Task<ActionResult<ItemResponse>> OpenCase(int caseId)
         {
-            //var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
             var @case = await context.Items.FirstOrDefaultAsync(x => x.ItemType == ItemType.Case && x.ItemId == caseId);
             if(@case == null) return NotFound();
 
-            //if((decimal)user.Balance < @case.ItemValue) return Forbid();
+            if((decimal)user.Balance < @case.ItemValue) return Forbid();
             
             var ctxCaseItems = await context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).ToArrayAsync();
 
@@ -548,15 +548,15 @@ namespace csgo.Controllers
             var caseItems = new WeightedList<Item>(itemList);
             var resultItem = caseItems.Next();
 
-            //await context.Userinventories.AddAsync(new Userinventory
-            //{
-            //    ItemId = resultItem.ItemId,
-            //    UserId = user.UserId
-            //});
+            await context.Userinventories.AddAsync(new Userinventory
+            {
+                ItemId = resultItem.ItemId,
+                UserId = user.UserId
+            });
 
-            //user.Balance -= Convert.ToDouble(@case.ItemValue);
+            user.Balance -= Convert.ToDouble(@case.ItemValue);
             
-            //await context.SaveChangesAsync();
+            await context.SaveChangesAsync();
 
             return Ok(resultItem.ToDto());
         }
