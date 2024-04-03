@@ -28,11 +28,11 @@ namespace csgo.Controllers
         private readonly Dictionary<ItemRarity, int> rarityWeights = new()
         {
             { ItemRarity.INDUSTRIAL_GRADE, 7992 },
-            { ItemRarity.MIL_SPEC, 7992 },
+            { ItemRarity.MIL_SPEC, 6992 },
             { ItemRarity.RESTRICTED, 1598 },
-            { ItemRarity.CLASSIFIED, 320 },
-            { ItemRarity.COVERT, 64 },
-            { ItemRarity.EXTRAORDINARY, 28 }
+            { ItemRarity.CLASSIFIED, 160 },
+            { ItemRarity.COVERT, 32 },
+            { ItemRarity.EXTRAORDINARY, 14 }
         };
 
         /// <summary>
@@ -537,7 +537,7 @@ namespace csgo.Controllers
             foreach (var item in ctxCaseItems)
             {
                 double rarityWeight = rarityWeights[item.Item.ItemRarity];
-                var valueWeight = (double)item.Item.ItemValue! / (double)@case.ItemValue!;
+                var valueWeight = (double)item.Item.ItemValue! / (double)@case.ItemValue! / 2;
                 var totalWeight = rarityWeight * valueWeight;
                 weights[item.Item] = totalWeight;
             }

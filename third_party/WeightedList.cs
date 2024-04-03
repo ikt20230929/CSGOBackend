@@ -18,20 +18,10 @@ namespace KaimiraGames
     public class WeightedList<T> : IEnumerable<T>
     {
         /// <summary>
-        /// Create a new WeightedList with an optional System.Random.
-        /// </summary>
-        /// <param name="rand"></param>
-        public WeightedList(Random rand = null)
-        {
-            _rand = rand ?? new Random();
-        }
-
-        /// <summary>
         /// Create a WeightedList with the provided items and an optional System.Random.
         /// </summary>
-        public WeightedList(ICollection<WeightedListItem<T>> listItems, Random rand = null)
+        public WeightedList(ICollection<WeightedListItem<T>> listItems)
         {
-            _rand = rand ?? new Random();
             foreach (WeightedListItem<T> item in listItems)
             {
                 _list.Add(item._item);
@@ -45,9 +35,9 @@ namespace KaimiraGames
         public T Next()
         {
             if (Count == 0) return default;
-            int nextInt = _rand.Next(Count);
+            int nextInt = Random.Shared.Next(Count);
             if (_areAllProbabilitiesIdentical) return _list[nextInt];
-            int nextProbability = _rand.Next(_totalWeight);
+            int nextProbability = Random.Shared.Next(_totalWeight);
             return (nextProbability < _probabilities[nextInt]) ? _list[nextInt] : _list[_alias[nextInt]];
         }
 
@@ -183,7 +173,6 @@ namespace KaimiraGames
         private readonly List<int> _weights = new List<int>();
         private readonly List<int> _probabilities = new List<int>();
         private readonly List<int> _alias = new List<int>();
-        private readonly Random _rand;
         private int _totalWeight;
         private bool _areAllProbabilitiesIdentical = false;
         private int _minWeight;
