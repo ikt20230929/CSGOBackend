@@ -28,11 +28,11 @@ namespace csgo.Controllers
         private readonly Dictionary<ItemRarity, int> rarityWeights = new()
         {
             { ItemRarity.INDUSTRIAL_GRADE, 7992 },
-            { ItemRarity.MIL_SPEC, 6992 },
+            { ItemRarity.MIL_SPEC, 7992 },
             { ItemRarity.RESTRICTED, 1598 },
-            { ItemRarity.CLASSIFIED, 160 },
-            { ItemRarity.COVERT, 32 },
-            { ItemRarity.EXTRAORDINARY, 14 }
+            { ItemRarity.CLASSIFIED, 320 },
+            { ItemRarity.COVERT, 64 },
+            { ItemRarity.EXTRAORDINARY, 28 }
         };
 
         /// <summary>
@@ -521,25 +521,26 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Consumes("application/json")]
         [Produces("application/json")]
-        [Authorize]
+        //[Authorize]
         public async Task<ActionResult<ItemResponse>> OpenCase(int caseId)
         {
-            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            //var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
             var @case = await context.Items.FirstOrDefaultAsync(x => x.ItemType == ItemType.Case && x.ItemId == caseId);
             if(@case == null) return NotFound();
 
-            if((decimal)user.Balance < @case.ItemValue) return Forbid();
+            //if((decimal)user.Balance < @case.ItemValue) return Forbid();
             
             var ctxCaseItems = await context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).ToArrayAsync();
 
             var weights = new Dictionary<Item, double>();
             foreach (var item in ctxCaseItems)
             {
-                double rarityWeight = rarityWeights[item.Item.ItemRarity];
-                var valueWeight = (double)item.Item.ItemValue! / (double)@case.ItemValue! / 2;
-                var totalWeight = rarityWeight * valueWeight;
-                weights[item.Item] = totalWeight;
+                    double rarityWeight = rarityWeights[item.Item.ItemRarity];
+                    double valueRatio = (double)item.Item.ItemValue! / (double)@case.ItemValue!;
+                    double valueWeight = 1 / (1 + valueRatio);
+                    var totalWeight = rarityWeight * valueWeight;
+                    weights[item.Item] = totalWeight;
             }
 
             var itemList = ctxCaseItems.Select(item => new WeightedListItem<Item>(item.Item, (int)weights[item.Item])).ToList();
@@ -547,15 +548,15 @@ namespace csgo.Controllers
             var caseItems = new WeightedList<Item>(itemList);
             var resultItem = caseItems.Next();
 
-            await context.Userinventories.AddAsync(new Userinventory
-            {
-                ItemId = resultItem.ItemId,
-                UserId = user.UserId
-            });
+            //await context.Userinventories.AddAsync(new Userinventory
+            //{
+            //    ItemId = resultItem.ItemId,
+            //    UserId = user.UserId
+            //});
 
-            user.Balance -= Convert.ToDouble(@case.ItemValue);
+            //user.Balance -= Convert.ToDouble(@case.ItemValue);
             
-            await context.SaveChangesAsync();
+            //await context.SaveChangesAsync();
 
             return Ok(resultItem.ToDto());
         }
