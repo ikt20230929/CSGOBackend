@@ -1,17 +1,41 @@
-using System.Globalization;
 using csgo.Jobs;
 using csgo.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Quartz;
 using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
 using Serilog;
+using Swashbuckle.AspNetCore.SwaggerGen;
 
 namespace csgo
 {
+    /// <summary>
+    /// Segédosztály arra, hogy a Fido2NetLib névtérbeli osztályok ne jelenjenek meg a Swagger dokumentációban.
+    /// </summary>
+    public class ExcludeFido2NetLibSchemas : ISchemaFilter
+    {
+        /// <summary>
+        /// A Fido2NetLib névtérbeli osztályok kiszűrése a Swagger dokumentációból.
+        /// </summary>
+        public void Apply(OpenApiSchema schema, SchemaFilterContext context)
+        {
+            var keys = new List<string>();
+            foreach(var key in context.SchemaRepository.Schemas.Keys)
+            {
+                if (key.Contains("Fido2NetLib") || key.StartsWith("Microsoft"))
+                {
+                    keys.Add(key);
+                }
+            }
+            foreach(var key in keys)
+            {
+                context.SchemaRepository.Schemas.Remove(key);
+            }
+        }
+    }
+
     /// <summary>
     /// A Program osztály.
     /// </summary>
@@ -23,6 +47,13 @@ namespace csgo
         /// <param name="args">Parancssori argumentumok</param>
         public static void Main(string[] args)
         {
+            var uploadsPath = Path.Combine(Directory.GetCurrentDirectory(), "uploads");
+            
+            if (!Directory.Exists(uploadsPath))
+            {
+                Directory.CreateDirectory(uploadsPath);
+            }
+
             JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
             JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
             var builder = WebApplication.CreateBuilder(args);
@@ -90,6 +121,19 @@ namespace csgo
 
                 var xmlFilename = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
                 option.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, xmlFilename));
+
+                option.CustomSchemaIds(type => {
+                    if (type.Namespace != null && type.Namespace.StartsWith("csgo"))
+                    {
+                        return type.Name;
+                    }
+                    else
+                    {
+                        return type.FullName;
+                    }
+                });
+
+                option.SchemaFilter<ExcludeFido2NetLibSchemas>();
             });
             builder.Services.AddQuartz(q =>
             {
@@ -126,6 +170,21 @@ namespace csgo
             app.UseHttpsRedirection();
             app.UseAuthentication();
             app.UseAuthorization();
+            app.UseStaticFiles(new StaticFileOptions
+            {
+                FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
+                RequestPath = "/api/images",
+                HttpsCompression = Microsoft.AspNetCore.Http.Features.HttpsCompressionMode.Compress,
+                OnPrepareResponse = ctx =>
+                {
+                    var headers = ctx.Context.Response.GetTypedHeaders();
+                    headers.CacheControl = new Microsoft.Net.Http.Headers.CacheControlHeaderValue
+                    {
+                        Public = true,
+                        MaxAge = TimeSpan.FromHours(24)
+                    };
+                }
+            });
             app.UseSwagger();
             app.UseSwaggerUI(c =>
             {

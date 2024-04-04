@@ -55,15 +55,15 @@ namespace csgo.Controllers
                 Email = register.Email,
                 Username = register.Username
             };
-            
+
             if (await context.Users.AnyAsync(u => u.Username == register.Username))
             {
-                return BadRequest(new ActionStatus{ Status = "ERR", Message = "A megadott felhasználónév már foglalt." });
+                return BadRequest(new ActionStatus { Status = "ERR", Message = "A megadott felhasználónév már foglalt." });
             }
 
             if (await context.Users.AnyAsync(u => u.Email == register.Email))
             {
-                return BadRequest(new ActionStatus{ Status = "ERR", Message = "Az megadott e-mail már használatban van." });
+                return BadRequest(new ActionStatus { Status = "ERR", Message = "Az megadott e-mail már használatban van." });
             }
 
             string hashedPassword = BCrypt.Net.BCrypt.HashPassword(register.Password);
@@ -71,7 +71,7 @@ namespace csgo.Controllers
             await context.Users.AddAsync(newUser);
             await context.SaveChangesAsync();
 
-            return Ok(new ActionStatus{ Status = "OK", Message = "Sikeres regisztráció!" });
+            return Ok(new ActionStatus { Status = "OK", Message = "Sikeres regisztráció!" });
         }
 
         /// <summary>
@@ -157,7 +157,7 @@ namespace csgo.Controllers
                 Secure = true
             });
 
-            return Ok(new ActionStatus{ Status = "OK", Message = accessToken });
+            return Ok(new ActionStatus { Status = "OK", Message = accessToken });
         }
 
         /// <summary>
@@ -179,7 +179,7 @@ namespace csgo.Controllers
 
             if (storedUser == null)
             {
-                return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidCredential" });
+                return BadRequest(new ActionStatus { Status = "ERR", Message = "InvalidCredential" });
             }
 
             string? twoFactorScenario = null;
@@ -198,75 +198,76 @@ namespace csgo.Controllers
             }
 
             if (twoFactorScenario == null) return CheckPassword(login.Password, storedUser);
-            if (login.Mfa == null) return Unauthorized(new ActionStatus{ Status = "UI", Message = twoFactorScenario });
+            if (login.Mfa == null) return Unauthorized(new ActionStatus { Status = "UI", Message = twoFactorScenario });
             switch (login.Mfa.MfaType)
             {
                 case MfaType.Totp:
-                {
-                    if (!storedUser.TotpEnabled) return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidMFAMethod" });
-                    if (login.Mfa.TotpToken == null) return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidTotp" });
-                    var totp = new Totp(Base32Encoding.ToBytes(storedUser.TotpSecret));
-                    bool verify = totp.VerifyTotp(login.Mfa.TotpToken, out _,
-                        VerificationWindow.RfcSpecifiedNetworkDelay);
-                    return verify ? CheckPassword(login.Password, storedUser) : BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidTotp" });
-                }
-                case MfaType.WebAuthnOptions:
-                {
-                    if (!storedUser.WebauthnEnabled) return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidMFAMethod" });                 
-                    if (storedUser.WebauthnCredentialId == null || storedUser.WebauthnPublicKey == null) return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidWebAuthn" });
-
-                    var credential = JsonSerializer.Deserialize<StoredCredential>(storedUser.WebauthnPublicKey);
-
-                    if (credential == null) return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidWebAuthn" });
-
-                    var options = fido2.GetAssertionOptions([credential.Descriptor], UserVerificationRequirement.Discouraged);
-
-                    HttpContext.Session.SetString("fido2.assertionOptions", options.ToJson());
-
-                    return Unauthorized(new ActionStatus{ Status = "UI", Message = options.ToJson() });
-                }
-                case MfaType.WebAuthnAssertion: {
-                    if (!storedUser.WebauthnEnabled) return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidMFAMethod" });
-                    if (storedUser.WebauthnCredentialId == null || storedUser.WebauthnPublicKey == null || login.Mfa.WebAuthnAssertationResponse == null) return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidWebAuthn" });
-
-                    var jsonOptions = HttpContext.Session.GetString("fido2.assertionOptions");
-                    var options = AssertionOptions.FromJson(jsonOptions);
-                    var credential = JsonSerializer.Deserialize<StoredCredential>(storedUser.WebauthnPublicKey);
-
-                    if (credential == null) return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidWebAuthn" });
-
-                    var result = await fido2.MakeAssertionAsync(
-                        login.Mfa.WebAuthnAssertationResponse, 
-                        options, 
-                        credential.PublicKey,
-                        credential.DevicePublicKeys,
-                        credential.SignCount,
-                        IsUserHandleOwnerOfCredentialId,
-                        CancellationToken.None);
-
-                    if (result.Status != "ok") return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidWebAuthn" });
-
-                    var storedCredential = new StoredCredential
                     {
-                        DevicePublicKeys = credential.DevicePublicKeys,
-                        Id = result.CredentialId,
-                        Descriptor = new PublicKeyCredentialDescriptor(result.CredentialId),
-                        PublicKey = credential.PublicKey,
-                        UserHandle = credential.UserHandle,
-                        SignCount = result.SignCount,
-                        RegDate = credential.RegDate,
-                        AaGuid = credential.AaGuid
-                    };
+                        if (!storedUser.TotpEnabled) return BadRequest(new ActionStatus { Status = "ERR", Message = "InvalidMFAMethod" });
+                        if (login.Mfa.TotpToken == null) return BadRequest(new ActionStatus { Status = "ERR", Message = "InvalidTotp" });
+                        var totp = new Totp(Base32Encoding.ToBytes(storedUser.TotpSecret));
+                        bool verify = totp.VerifyTotp(login.Mfa.TotpToken, out _,
+                            VerificationWindow.RfcSpecifiedNetworkDelay);
+                        return verify ? CheckPassword(login.Password, storedUser) : BadRequest(new ActionStatus { Status = "ERR", Message = "InvalidTotp" });
+                    }
+                case MfaType.WebAuthnOptions:
+                    {
+                        if (!storedUser.WebauthnEnabled) return BadRequest(new ActionStatus { Status = "ERR", Message = "InvalidMFAMethod" });
+                        if (storedUser.WebauthnCredentialId == null || storedUser.WebauthnPublicKey == null) return BadRequest(new ActionStatus { Status = "ERR", Message = "InvalidWebAuthn" });
 
-                    storedUser.WebauthnPublicKey = JsonSerializer.Serialize(storedCredential);
-                    await context.SaveChangesAsync();
+                        var credential = JsonSerializer.Deserialize<StoredCredential>(storedUser.WebauthnPublicKey);
 
-                    return CheckPassword(login.Password, storedUser);
-                }
+                        if (credential == null) return BadRequest(new ActionStatus { Status = "ERR", Message = "InvalidWebAuthn" });
+
+                        var options = fido2.GetAssertionOptions([credential.Descriptor], UserVerificationRequirement.Discouraged);
+
+                        HttpContext.Session.SetString("fido2.assertionOptions", options.ToJson());
+
+                        return Unauthorized(new ActionStatus { Status = "UI", Message = options.ToJson() });
+                    }
+                case MfaType.WebAuthnAssertion:
+                    {
+                        if (!storedUser.WebauthnEnabled) return BadRequest(new ActionStatus { Status = "ERR", Message = "InvalidMFAMethod" });
+                        if (storedUser.WebauthnCredentialId == null || storedUser.WebauthnPublicKey == null || login.Mfa.WebAuthnAssertationResponse == null) return BadRequest(new ActionStatus { Status = "ERR", Message = "InvalidWebAuthn" });
+
+                        var jsonOptions = HttpContext.Session.GetString("fido2.assertionOptions");
+                        var options = AssertionOptions.FromJson(jsonOptions);
+                        var credential = JsonSerializer.Deserialize<StoredCredential>(storedUser.WebauthnPublicKey);
+
+                        if (credential == null) return BadRequest(new ActionStatus { Status = "ERR", Message = "InvalidWebAuthn" });
+
+                        var result = await fido2.MakeAssertionAsync(
+                            login.Mfa.WebAuthnAssertationResponse,
+                            options,
+                            credential.PublicKey,
+                            credential.DevicePublicKeys,
+                            credential.SignCount,
+                            IsUserHandleOwnerOfCredentialId,
+                            CancellationToken.None);
+
+                        if (result.Status != "ok") return BadRequest(new ActionStatus { Status = "ERR", Message = "InvalidWebAuthn" });
+
+                        var storedCredential = new StoredCredential
+                        {
+                            DevicePublicKeys = credential.DevicePublicKeys,
+                            Id = result.CredentialId,
+                            Descriptor = new PublicKeyCredentialDescriptor(result.CredentialId),
+                            PublicKey = credential.PublicKey,
+                            UserHandle = credential.UserHandle,
+                            SignCount = result.SignCount,
+                            RegDate = credential.RegDate,
+                            AaGuid = credential.AaGuid
+                        };
+
+                        storedUser.WebauthnPublicKey = JsonSerializer.Serialize(storedCredential);
+                        await context.SaveChangesAsync();
+
+                        return CheckPassword(login.Password, storedUser);
+                    }
                 default:
-                {
-                    return BadRequest(new ActionStatus{ Status = "ERR", Message = "InvalidCredential" });
-                }
+                    {
+                        return BadRequest(new ActionStatus { Status = "ERR", Message = "InvalidCredential" });
+                    }
             }
         }
 
@@ -304,10 +305,12 @@ namespace csgo.Controllers
                 Id = Encoding.UTF8.GetBytes(user.UserId.ToString())
             };
 
-            var options = fido2.RequestNewCredential(fidoUser, [], new AuthenticatorSelection {
+            var options = fido2.RequestNewCredential(fidoUser, [], new AuthenticatorSelection
+            {
                 ResidentKey = ResidentKeyRequirement.Preferred,
                 UserVerification = UserVerificationRequirement.Preferred
-            }, AttestationConveyancePreference.None, new AuthenticationExtensionsClientInputs{
+            }, AttestationConveyancePreference.None, new AuthenticationExtensionsClientInputs
+            {
                 CredProps = true
             });
 
@@ -337,14 +340,15 @@ namespace csgo.Controllers
         public async Task<ActionResult> WebAuthnAttestation([FromBody] AuthenticatorAttestationRawResponse attestationResponse)
         {
             var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            try{
+            try
+            {
                 var jsonOptions = HttpContext.Session.GetString("fido2.attestationOptions");
                 if (jsonOptions == null) return NotFound();
                 var options = CredentialCreateOptions.FromJson(jsonOptions);
 
                 var fidoCredentials = await fido2.MakeNewCredentialAsync(attestationResponse, options, IsCredentialIdUniqueToUser, CancellationToken.None);
 
-                if(fidoCredentials.Result == null || fidoCredentials.Status != "ok") return BadRequest();
+                if (fidoCredentials.Result == null || fidoCredentials.Status != "ok") return BadRequest();
 
                 var storedCredential = new StoredCredential
                 {
@@ -364,7 +368,8 @@ namespace csgo.Controllers
                 await context.SaveChangesAsync();
 
                 return Ok();
-            }catch(Exception e)
+            }
+            catch (Exception e)
             {
                 return BadRequest(new MakeNewCredentialResult("error", e.Message, null));
             }
@@ -389,9 +394,10 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
         [Produces("application/json")]
         [Authorize]
-        public async Task<ActionResult<ActionStatus>> GenerateTotpToken() {
+        public async Task<ActionResult<ActionStatus>> GenerateTotpToken()
+        {
             var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            if(user.TotpEnabled) return Conflict();
+            if (user.TotpEnabled) return Conflict();
 
             user.TotpSecret = Base32Encoding.ToString(KeyGeneration.GenerateRandomKey(20));
             await context.SaveChangesAsync();
@@ -417,18 +423,22 @@ namespace csgo.Controllers
         [Produces("application/json")]
         [Consumes("application/json")]
         [Authorize]
-        public async Task<ActionResult<ActionStatus>> CheckTotpToken(EnableTOTPRequest request) {
+        public async Task<ActionResult<ActionStatus>> CheckTotpToken(EnableTOTPRequest request)
+        {
             var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            if(user.TotpEnabled) return Conflict();
+            if (user.TotpEnabled) return Conflict();
 
             var totp = new Totp(Base32Encoding.ToBytes(user.TotpSecret));
             bool verify = totp.VerifyTotp(request.Code, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
 
-            if(verify) {
+            if (verify)
+            {
                 user.TotpEnabled = true;
                 await context.SaveChangesAsync();
                 return NoContent();
-            }else{
+            }
+            else
+            {
                 return Forbid();
             }
         }
@@ -450,20 +460,24 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
         [Consumes("application/json")]
         [Authorize]
-        public async Task<ActionResult<ActionStatus>> DisableTotp(DisableTOTPRequest request) {
+        public async Task<ActionResult<ActionStatus>> DisableTotp(DisableTOTPRequest request)
+        {
             var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            if(!user.TotpEnabled) return Conflict();
+            if (!user.TotpEnabled) return Conflict();
 
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash)) return Forbid();
 
             var totp = new Totp(Base32Encoding.ToBytes(user.TotpSecret));
             bool verify = totp.VerifyTotp(request.Code, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
 
-            if(verify) {
+            if (verify)
+            {
                 user.TotpEnabled = false;
                 await context.SaveChangesAsync();
                 return NoContent();
-            }else{
+            }
+            else
+            {
                 return Forbid();
             }
         }
@@ -483,25 +497,25 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<List<CaseResponse>>> GetCases()
         {
-                var items = await context.Items
-                    .Where(x => x.ItemType == ItemType.Case)
+            var items = await context.Items
+                .Where(x => x.ItemType == ItemType.Case)
+                .ToListAsync();
+
+            var caseDtos = new List<CaseResponse>();
+
+            foreach (var item in items)
+            {
+                var caseItems = await context.CaseItems
+                    .Where(y => y.CaseId == item.ItemId)
+                    .Select(z => z.Item)
+                    .Select(z => z.ToDto())
                     .ToListAsync();
 
-                var caseDtos = new List<CaseResponse>();
+                var caseDto = item.ToCaseDto(caseItems);
+                caseDtos.Add(caseDto);
+            }
 
-                foreach (var item in items)
-                {
-                    var caseItems = await context.CaseItems
-                        .Where(y => y.CaseId == item.ItemId)
-                        .Select(z => z.Item)
-                        .Select(z => z.ToDto())
-                        .ToListAsync();
-
-                    var caseDto = item.ToCaseDto(caseItems);
-                    caseDtos.Add(caseDto);
-                }
-
-                return Ok(caseDtos);
+            return Ok(caseDtos);
         }
 
         /// <summary>
@@ -527,20 +541,20 @@ namespace csgo.Controllers
             var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
             var @case = await context.Items.FirstOrDefaultAsync(x => x.ItemType == ItemType.Case && x.ItemId == caseId);
-            if(@case == null) return NotFound();
+            if (@case == null) return NotFound();
 
-            if((decimal)user.Balance < @case.ItemValue) return Forbid();
-            
+            if ((decimal)user.Balance < @case.ItemValue) return Forbid();
+
             var ctxCaseItems = await context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).ToArrayAsync();
 
             var weights = new Dictionary<Item, double>();
             foreach (var item in ctxCaseItems)
             {
-                    double rarityWeight = rarityWeights[item.Item.ItemRarity];
-                    double valueRatio = (double)item.Item.ItemValue! / (double)@case.ItemValue!;
-                    double valueWeight = 1 / (1 + valueRatio);
-                    var totalWeight = rarityWeight * valueWeight;
-                    weights[item.Item] = totalWeight;
+                double rarityWeight = rarityWeights[item.Item.ItemRarity];
+                double valueRatio = (double)item.Item.ItemValue! / (double)@case.ItemValue!;
+                double valueWeight = 1 / (1 + valueRatio);
+                var totalWeight = rarityWeight * valueWeight;
+                weights[item.Item] = totalWeight;
             }
 
             var itemList = ctxCaseItems.Select(item => new WeightedListItem<Item>(item.Item, (int)weights[item.Item])).ToList();
@@ -555,7 +569,7 @@ namespace csgo.Controllers
             });
 
             user.Balance -= Convert.ToDouble(@case.ItemValue);
-            
+
             await context.SaveChangesAsync();
 
             return Ok(resultItem.ToDto());
@@ -599,7 +613,7 @@ namespace csgo.Controllers
             var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
             var inventoryItem = await context.Userinventories.Include(x => x.Item).FirstOrDefaultAsync(x => x.InventoryId == inventoryId && x.UserId == user.UserId);
-            if(inventoryItem == null) return NotFound();
+            if (inventoryItem == null) return NotFound();
 
             user.Balance += Convert.ToDouble(inventoryItem.Item.ItemValue);
             context.Userinventories.Remove(inventoryItem);
@@ -607,7 +621,7 @@ namespace csgo.Controllers
 
             return NoContent();
         }
-        
+
         /// <summary>
         /// Visszaad egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgy(akat).
         /// </summary>
@@ -624,11 +638,13 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
         [Authorize]
-        public async Task<ActionResult<ActionStatus>> GetUpgradeItems(ItemUpgradeListRequest request) {
+        public async Task<ActionResult<ActionStatus>> GetUpgradeItems(ItemUpgradeListRequest request)
+        {
             User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
-            foreach (var item in request.Items) {
-                if(!await context.Userinventories.AnyAsync(x => x.InventoryId == item && x.UserId == user.UserId)) return NotFound();
+            foreach (var item in request.Items)
+            {
+                if (!await context.Userinventories.AnyAsync(x => x.InventoryId == item && x.UserId == user.UserId)) return NotFound();
             }
 
             List<InventoryItemResponse> itemData = request.Items.Select(x => context.Userinventories.Include(y => y.Item).First(y => y.InventoryId == x).Item.ToInventoryItemDto(x)).ToList();
@@ -659,43 +675,53 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [Authorize]
-        public async Task<ActionResult<ItemUpgradeResponse>> UpgradeItem(ItemUpgradeRequest request) {
+        public async Task<ActionResult<ItemUpgradeResponse>> UpgradeItem(ItemUpgradeRequest request)
+        {
             User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
-            foreach (var item in request.Items) {
-                if(!await context.Userinventories.AnyAsync(x => x.InventoryId == item && x.UserId == user.UserId)) return NotFound();
+            foreach (var item in request.Items)
+            {
+                if (!await context.Userinventories.AnyAsync(x => x.InventoryId == item && x.UserId == user.UserId)) return NotFound();
             }
 
             List<InventoryItemResponse> itemData = request.Items.Select(x => context.Userinventories.Include(y => y.Item).First(y => y.InventoryId == x).Item.ToInventoryItemDto(x)).ToList();
 
             var nextItem = await context.Items.FirstOrDefaultAsync(x => x.ItemId == request.Target && x.ItemType == ItemType.Item);
-            if(nextItem == null) return NotFound();
+            if (nextItem == null) return NotFound();
 
             var totalValue = itemData.Sum(x => x.ItemValue);
 
             var chance = GetItemUpgradeSuccessChance(totalValue, nextItem);
 
-            if(GetRandomDouble() < chance) {
-                foreach (var item in itemData) {
+            if (GetRandomDouble() < chance)
+            {
+                foreach (var item in itemData)
+                {
                     context.Userinventories.Remove(await context.Userinventories.FirstAsync(x => x.InventoryId == item.InventoryId));
                 }
-                await context.Userinventories.AddAsync(new Userinventory {
+                await context.Userinventories.AddAsync(new Userinventory
+                {
                     ItemId = nextItem.ItemId,
                     UserId = user.UserId
                 });
                 await context.SaveChangesAsync();
 
-                return Ok(new ItemUpgradeResponse {
+                return Ok(new ItemUpgradeResponse
+                {
                     Success = true,
                     Item = nextItem.ToDto()
                 });
-            } else {
-                foreach (var item in itemData) {
+            }
+            else
+            {
+                foreach (var item in itemData)
+                {
                     context.Userinventories.Remove(await context.Userinventories.FirstAsync(x => x.InventoryId == item.InventoryId));
                 }
                 await context.SaveChangesAsync();
-                
-                return Ok(new ItemUpgradeResponse {
+
+                return Ok(new ItemUpgradeResponse
+                {
                     Success = false,
                     Item = null
                 });
@@ -717,22 +743,26 @@ namespace csgo.Controllers
         [Consumes("application/json")]
         [Produces("application/json")]
         [Authorize]
-        public async Task<ActionResult> ClaimDailyReward() {
+        public async Task<ActionResult> ClaimDailyReward()
+        {
             User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            if(user.LastClaimDate.Date == DateTime.Now.Date) return Conflict();
+            if (user.LastClaimDate.Date == DateTime.Now.Date) return Conflict();
 
             // Ha az utolsó kérés dátuma nem az aktuális hónapban van, akkor a streaket nullázni kell.
-            if(user.LastClaimDate.Month != DateTime.Now.Month) user.LoginStreak = 1;
+            if (user.LastClaimDate.Month != DateTime.Now.Month) user.LoginStreak = 1;
 
             int reward = 5;
-            
-            if(user.LastClaimDate.Date.AddDays(1) == DateTime.Now.Date) {
+
+            if (user.LastClaimDate.Date.AddDays(1) == DateTime.Now.Date)
+            {
                 user.LoginStreak++;
-                if(user.LoginStreak == 3) reward *= 2;
-                if(user.LoginStreak == 7) reward *= 3;
-                if(user.LoginStreak == 14) reward *= 4;
-                if(user.LoginStreak == 30) reward *= 5;
-            } else {
+                if (user.LoginStreak == 3) reward *= 2;
+                if (user.LoginStreak == 7) reward *= 3;
+                if (user.LoginStreak == 14) reward *= 4;
+                if (user.LoginStreak == 30) reward *= 5;
+            }
+            else
+            {
                 user.LoginStreak = 1;
             }
 
@@ -828,7 +858,7 @@ namespace csgo.Controllers
             var giveaways = await context.Giveaways
                 .Where(x => x.GiveawayDate <= DateTime.Now && x.WinnerUserId != null)
                 .Include(x => x.Item).Include(giveaway => giveaway.WinnerUser).ToListAsync();
-            
+
             var mapped = giveaways.Select(giveaway => new PastGiveawayResponse
             {
                 GiveawayDescription = giveaway.GiveawayDescription,
@@ -869,7 +899,7 @@ namespace csgo.Controllers
                 ItemType = ItemType.Case,
                 ItemValue = details.Value,
             };
-            
+
             await context.Items.AddAsync(@case);
             await context.SaveChangesAsync();
 
@@ -893,9 +923,10 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
         [Authorize]
-        public async Task<ActionResult> DeleteCase(int caseId) {
+        public async Task<ActionResult> DeleteCase(int caseId)
+        {
             var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            if(!user.IsAdmin) return Forbid();
+            if (!user.IsAdmin) return Forbid();
 
             var @case = await context.Items.FirstOrDefaultAsync(x => x.ItemId == caseId && x.ItemType == ItemType.Case);
 
@@ -987,7 +1018,7 @@ namespace csgo.Controllers
                 ItemId = item.ItemId
             });
             await context.SaveChangesAsync();
-            
+
             var caseItems = await context.CaseItems.Where(x => x.Case == @case).Select(x => x.Item.ToDto()).ToListAsync();
 
             return Ok(@case.ToCaseDto(caseItems));
@@ -1024,7 +1055,7 @@ namespace csgo.Controllers
             if (@case == null || item == null) return NotFound();
 
             var caseItem = await context.CaseItems.FindAsync(caseId, itemId);
-            if(caseItem == null) return NotFound();
+            if (caseItem == null) return NotFound();
 
             context.CaseItems.Remove(caseItem);
             await context.SaveChangesAsync();
@@ -1052,14 +1083,16 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
         [Authorize]
-        public async Task<ActionResult<CurrentGiveawayResponse>> AddGiveaway(GiveawayRecord details) {
+        public async Task<ActionResult<CurrentGiveawayResponse>> AddGiveaway(GiveawayRecord details)
+        {
             User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
             if (!user.IsAdmin) return Forbid();
 
             var item = await context.Items.FindAsync(details.ItemId);
             if (item == null) return NotFound();
 
-            var giveaway = new Giveaway{
+            var giveaway = new Giveaway
+            {
                 ItemId = item.ItemId,
                 GiveawayDate = details.Date.ToLocalTime(),
                 GiveawayDescription = details.Description,
@@ -1069,7 +1102,8 @@ namespace csgo.Controllers
             await context.Giveaways.AddAsync(giveaway);
             await context.SaveChangesAsync();
 
-            return Ok(new CurrentGiveawayResponse {
+            return Ok(new CurrentGiveawayResponse
+            {
                 GiveawayDate = giveaway.GiveawayDate,
                 GiveawayDescription = giveaway.GiveawayDescription,
                 GiveawayId = giveaway.GiveawayId,
@@ -1098,11 +1132,11 @@ namespace csgo.Controllers
         public async Task<ActionResult> DeleteGiveaway(int giveawayId)
         {
             var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
-            if(!user.IsAdmin) return Forbid();
+            if (!user.IsAdmin) return Forbid();
 
             var giveaway = await context.Giveaways.FindAsync(giveawayId);
 
-            if(giveaway == null) return NotFound();
+            if (giveaway == null) return NotFound();
 
             var participants = await context.Users.Include(x => x.Giveaways).Where(x => x.Giveaways.Contains(giveaway)).ToListAsync();
 
@@ -1202,7 +1236,7 @@ namespace csgo.Controllers
                 ItemSkinName = details.SkinName,
                 ItemValue = details.Value
             };
-            
+
             await context.Items.AddAsync(item);
             await context.SaveChangesAsync();
 
@@ -1233,7 +1267,7 @@ namespace csgo.Controllers
 
             var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId && x.ItemType == ItemType.Item);
 
-            if(item == null) return NotFound();
+            if (item == null) return NotFound();
 
             var inventories = await context.Userinventories.Where(x => x.ItemId == itemId).ToListAsync();
 
@@ -1348,7 +1382,8 @@ namespace csgo.Controllers
             var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId && x.ItemType == ItemType.Item);
             if (target == null || item == null) return NotFound();
 
-            await context.Userinventories.AddAsync(new Userinventory {
+            await context.Userinventories.AddAsync(new Userinventory
+            {
                 UserId = target.UserId,
                 ItemId = item.ItemId
             });
@@ -1357,7 +1392,7 @@ namespace csgo.Controllers
             List<InventoryItemResponse> items = await context.Userinventories.Where(x => x.UserId == user.UserId)
                 .Select(x => x.Item.ToInventoryItemDto(x.InventoryId))
                 .ToListAsync();
-            
+
             return Ok(items);
 
         }
@@ -1392,12 +1427,12 @@ namespace csgo.Controllers
 
             var userInventory = await context.Userinventories.FirstOrDefaultAsync(x => x.UserId == target.UserId && x.ItemId == item.ItemId);
             if (userInventory == null) return NotFound();
-            
+
             context.Userinventories.Remove(userInventory);
             await context.SaveChangesAsync();
 
             List<InventoryItemResponse> items = await context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId)).ToListAsync();
-            
+
             return Ok(items);
         }
 
@@ -1439,6 +1474,75 @@ namespace csgo.Controllers
             return Ok(item.ToDto());
         }
 
+        /// <summary>
+        /// Kép feltöltése (Admin jog szükséges)
+        /// </summary>
+        /// <param name="image">A feltöltendő kép.</param>
+        /// <returns>A kép elérési útja.</returns>
+        /// <response code="200">Visszaadja a kép elérési útját.</response>
+        /// <response code="400">Nem lett kép feltöltve.</response>
+        /// <response code="500">Belső szerver hiba.</response>
+        /// <response code="403">A jelenleg bejelentkezett felhasználó nem rendelkezik admin jogokkal</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpPost("admin/images")]
+        [Consumes("multipart/form-data")]
+        [Produces("application/json")]
+        [ProducesResponseType(typeof(ActionStatus), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(ActionStatus), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(ActionStatus), StatusCodes.Status500InternalServerError)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(typeof(ActionStatus), StatusCodes.Status401Unauthorized)]
+        [Authorize]
+        public async Task<IActionResult> ImageUpload(IFormFile image)
+        {
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+            if (!user.IsAdmin) return Forbid();
+
+            try
+            {
+                if (image.Length == 0)
+                {
+                    return BadRequest(new ActionStatus { Status = "ERR", Message = "Nincs megadva kép." });
+                }
+
+                var allowedExtensions = new[] { ".jpg", ".jpeg", ".jpeg2000", ".png", ".gif" };
+                var extension = Path.GetExtension(image.FileName).ToLower();
+
+                if (!allowedExtensions.Contains(extension))
+                {
+                    return BadRequest(new ActionStatus { Status = "ERR", Message = "Nem megfelelő képformátum." });
+                }
+
+                using (var reader = new BinaryReader(image.OpenReadStream()))
+                {
+                    var signatures = _fileSignatures.Values.SelectMany(x => x).ToList();
+                    var headerBytes = reader.ReadBytes(_fileSignatures.Max(m => m.Value.Max(n => n.Length)));
+                    bool result = signatures.Any(signature => headerBytes.Take(signature.Length).SequenceEqual(signature));
+                    
+                    if (!result)
+                    {
+                        return BadRequest(new ActionStatus { Status = "ERR", Message = "Nem megfelelő képformátum." });
+                    }
+                }
+
+                var fileName = Path.GetRandomFileName() + Path.GetExtension(image.FileName);
+                var filePath = Path.Combine("uploads", fileName);
+
+                await using (var stream = new FileStream(filePath, FileMode.Create))
+                {
+                    await image.CopyToAsync(stream);
+                }
+
+                var imageUrl = $"/api/images/{fileName}";
+
+                return Ok(new ActionStatus { Status = "OK", Message = imageUrl });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ActionStatus { Status = "ERR", Message = ex.Message });
+            }
+        }
+
         private static (string accessToken, string refreshToken) GenerateTokens(User user)
         {
             var claims = new List<Claim>
@@ -1468,6 +1572,32 @@ namespace csgo.Controllers
             return (accessTokenString, refreshTokenString);
         }
 
+        private static readonly Dictionary<string, List<byte[]>> _fileSignatures = new()
+        {
+            { ".gif", new List<byte[]> { new byte[] { 0x47, 0x49, 0x46, 0x38 } } },
+            { ".png", new List<byte[]> { new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A } } },
+            { ".jpeg", new List<byte[]>
+                {
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 },
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xE2 },
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xE3 },
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xEE },
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xDB },
+                }
+            },
+            { ".jpeg2000", new List<byte[]> { new byte[] { 0x00, 0x00, 0x00, 0x0C, 0x6A, 0x50, 0x20, 0x20, 0x0D, 0x0A, 0x87, 0x0A } } },
+
+            { ".jpg", new List<byte[]>
+                {
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xE0 },
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xE1 },
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xE8 },
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xEE },
+                    new byte[] { 0xFF, 0xD8, 0xFF, 0xDB },
+                }
+            }
+        };
+
         private ActionResult CheckPassword(string password, User storedUser)
         {
             if (!BCrypt.Net.BCrypt.Verify(password, storedUser.PasswordHash)) return BadRequest("InvalidCredentials");
@@ -1479,7 +1609,7 @@ namespace csgo.Controllers
                 MaxAge = TimeSpan.FromDays(7),
                 Secure = true
             });
-            return Ok(new ActionStatus{ Status = "OK", Message = accessToken });
+            return Ok(new ActionStatus { Status = "OK", Message = accessToken });
 
         }
 
@@ -1498,7 +1628,7 @@ namespace csgo.Controllers
             return successChance;
         }
 
-        
+
         private static double GetRandomDouble()
         {
             byte[] bytes = new byte[8];
@@ -1509,6 +1639,6 @@ namespace csgo.Controllers
 
             long longValue = BitConverter.ToInt64(bytes, 0);
             return (double)longValue / long.MaxValue;
-    }
+        }
     }
 }
