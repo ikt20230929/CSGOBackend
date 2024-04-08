@@ -100,6 +100,12 @@ namespace csgo
         public record ItemUpgradeListRequest([Required] List<int> Items, [Required] int Multiplier);
 
         /// <summary>
+        /// Egy (vagy több) tárgy kikérése.
+        /// </summary>
+        /// <param name="Items">A tárgy(ak) leltárazonosítója(i)</param>
+        public record ItemWithdrawRequest([Required] List<int> Items);
+
+        /// <summary>
         /// Egy tárgy feljesztési kérelem
         /// </summary>
         /// <param name="Items">A fejlesztendő tárgy(ak) azonosítója(i)</param>

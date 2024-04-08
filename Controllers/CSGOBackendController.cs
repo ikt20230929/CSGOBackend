@@ -623,6 +623,44 @@ namespace csgo.Controllers
         }
 
         /// <summary>
+        /// Egy vagy több tárgy kikérése.
+        /// </summary>
+        /// <param name="request">A tárgyak leltárazonosítói.</param>
+        /// <returns>204 ha sikerült, 400 ha nem.</returns>
+        /// <response code="204">A tárgyak kikérése sikeres volt.</response>
+        /// <response code="404">A tárgy nem található.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpPost]
+        [Route("items/withdraw")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status404NotFound)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Produces("application/json")]
+        [Consumes("application/json")]
+        [Authorize]
+        public async Task<ActionResult<ActionStatus>> WithdrawItems(ItemWithdrawRequest request)
+        {
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+
+            foreach (var item in request.Items)
+            {
+                var inventoryItem = await context.Userinventories.Include(x => x.Item).FirstOrDefaultAsync(x => x.InventoryId == item && x.UserId == user.UserId);
+                if (inventoryItem == null) return NotFound();
+            }
+
+            // Valójában csak kitöröljük a tárgyakat a leltárból, mert nincs külső rendszerhez (Steamhez) integrációnk.
+            foreach (var item in request.Items)
+            {
+                var inventoryItem = await context.Userinventories.Include(x => x.Item).FirstAsync(x => x.InventoryId == item && x.UserId == user.UserId);
+                context.Userinventories.Remove(inventoryItem);
+            }
+
+            await context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        /// <summary>
         /// Visszaad egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgy(akat).
         /// </summary>
         /// <param name="request">A tárgy(ak) leltárazonosítójai, és a szorzó.</param>
@@ -638,7 +676,7 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
         [Authorize]
-        public async Task<ActionResult<ActionStatus>> GetUpgradeItems(ItemUpgradeListRequest request)
+        public async Task<ActionResult<ActionStatus>> GetUpgradeItems(ItemWithdrawRequest request)
         {
             User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 
