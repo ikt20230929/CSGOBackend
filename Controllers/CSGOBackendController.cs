@@ -865,6 +865,7 @@ namespace csgo.Controllers
                 GiveawayItem = giveaway.Item?.ItemName,
                 GiveawayName = giveaway.GiveawayName,
                 GiveawayId = giveaway.GiveawayId,
+                GiveawayDate = giveaway.GiveawayDate,
                 WinnerName = giveaway.WinnerUser?.Username
             }).ToList();
 

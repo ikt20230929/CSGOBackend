@@ -334,6 +334,11 @@ namespace csgo
             /// A nyereményjáték nyertesének neve
             /// </summary>
             [Required][JsonPropertyName("winnerName")] public string? WinnerName { get; init; }
+
+            /// <summary>
+            /// A nyereményjáték sorsolásának ideje
+            /// </summary>
+            [Required][JsonPropertyName("giveawayDate")] public DateTime GiveawayDate { get; init; }
         }
 
         /// <summary>
