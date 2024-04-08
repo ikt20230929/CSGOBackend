@@ -898,6 +898,7 @@ namespace csgo.Controllers
                 ItemName = details.Name,
                 ItemType = ItemType.Case,
                 ItemValue = details.Value,
+                ItemAssetUrl = details.AssetUrl ?? null
             };
 
             await context.Items.AddAsync(@case);
@@ -974,6 +975,7 @@ namespace csgo.Controllers
 
             @case.ItemName = details.Name;
             @case.ItemValue = details.Value;
+            if (details.AssetUrl != null) @case.ItemAssetUrl = details.AssetUrl;
 
             await context.SaveChangesAsync();
 
@@ -1234,7 +1236,8 @@ namespace csgo.Controllers
                 ItemDescription = details.Description,
                 ItemRarity = details.Rarity,
                 ItemSkinName = details.SkinName,
-                ItemValue = details.Value
+                ItemValue = details.Value,
+                ItemAssetUrl = details.AssetUrl ?? null
             };
 
             await context.Items.AddAsync(item);
@@ -1468,6 +1471,7 @@ namespace csgo.Controllers
             item.ItemRarity = details.Rarity;
             item.ItemSkinName = details.SkinName;
             item.ItemValue = details.Value;
+            if (details.AssetUrl != null) item.ItemAssetUrl = details.AssetUrl;
 
             await context.SaveChangesAsync();
 

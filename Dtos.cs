@@ -47,12 +47,14 @@ namespace csgo
         /// <param name="Rarity">A tárgy ritkasága</param>
         /// <param name="SkinName">A tárgy skinének neve</param>
         /// <param name="Value">A tárgy értéke</param>
+        /// <param name="AssetUrl">A tárgy képének URL-je</param>
         public record ItemRecord(
             [Required] string Name,
             [Required] string Description,
             [Required] ItemRarity Rarity,
             [Required] string SkinName,
-            [Required] decimal Value);
+            [Required] decimal Value,
+            [Optional] string? AssetUrl);
 
         /// <summary>
         /// Egy skin leírása.
@@ -66,7 +68,8 @@ namespace csgo
         /// </summary>
         /// <param name="Name">A láda neve</param>
         /// <param name="Value">A láda értéke</param>
-        public record CaseRecord([Required] string Name, [Required] decimal Value);
+        /// <param name="AssetUrl">A láda képének URL-je</param>
+        public record CaseRecord([Required] string Name, [Required] decimal Value, [Optional] string? AssetUrl);
 
         /// <summary>
         /// Egy nyereményjáték leírása
