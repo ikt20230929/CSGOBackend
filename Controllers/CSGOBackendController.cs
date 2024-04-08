@@ -661,6 +661,35 @@ namespace csgo.Controllers
         }
 
         /// <summary>
+        /// Egyenleg feltöltése.
+        /// </summary>
+        /// <param name="amount">A feltöltendő összeg.</param> 
+        /// <returns>204 ha sikerült, 400 ha nem.</returns>
+        /// <response code="204">A feltöltés sikeres volt.</response>
+        /// <response code="400">A feltöltés sikertelen volt.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        [HttpPost]
+        [Route("deposit")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status204NoContent)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Produces("application/json")]
+        [Consumes("application/json")]
+        [Authorize]
+        public async Task<ActionResult> Deposit(double amount)
+        {
+            var user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
+
+            if (amount <= 0) return BadRequest();
+
+            user.Balance += amount;
+            await context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+
+        /// <summary>
         /// Visszaad egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgy(akat).
         /// </summary>
         /// <param name="request">A tárgy(ak) leltárazonosítójai, és a szorzó.</param>
