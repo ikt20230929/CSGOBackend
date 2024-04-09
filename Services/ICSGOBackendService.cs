@@ -34,21 +34,21 @@ namespace csgo.Services
         /// </summary>
         /// <param name="login">Egy "Login" rekord, ami a felhasználó nevét, és jelszavát tartalmazza, és ha be van kapcsolva, akkor a két faktoros belépés adatait is.</param>
         /// <returns>Egy új access-refresh token párt.</returns>
-        public Task<ActionStatus> LoginUser(LoginRequest login);
+        public Task<ActionStatus> LoginUserAsync(LoginRequest login);
 
         /// <summary>
         /// WebAuthn attesztáció
         /// </summary>
         /// <param name="details">A WebAuthn attesztáció lépése. (1. vagy 2. lépés)</param>
         /// <returns>A WebAuthn attesztáció beállításait.</returns>
-        public Task<ActionStatus> WebAuthnAttestation(WebauthnAttestationRequest details);
+        public Task<ActionStatus> WebAuthnAttestationAsync(WebauthnAttestationRequest details);
 
         /// <summary>
         /// TOTP kulcs generálása
         /// </summary>
         /// <param name="user">A kérelmet küldő felhasználó</param>
         /// <returns>Egy TOTP kulcsot</returns>
-        public Task<ActionStatus> GenerateTotpToken(User user);
+        public Task<ActionStatus> GenerateTotpTokenAsync(User user);
 
         /// <summary>
         /// TOTP kulcs ellenőrzeése
@@ -56,7 +56,7 @@ namespace csgo.Services
         /// <param name="request">A TOTP kulcs</param>
         /// <param name="user">A kérelmet küldő felhasználó</param>
         /// <returns>Az eredményt, hogy sikeres volt-e a TOTP kulcs ellenőrzése.</returns>
-        public Task<ActionStatus> CheckTotpToken(User user, EnableTOTPRequest request);
+        public Task<ActionStatus> CheckTotpTokenAsync(User user, EnableTOTPRequest request);
 
         /// <summary>
         /// TOTP kikapcsolása
@@ -64,13 +64,13 @@ namespace csgo.Services
         /// <returns>Az eredményt, hogy sikeres volt-e a TOTP kikapcsolása.</returns>
         /// <param name="request">TOTP kód, jelszó</param>
         /// <param name="user">A kérelmet küldő felhasználó</param>
-        public Task<ActionStatus> DisableTotp(User user, DisableTOTPRequest request);
+        public Task<ActionStatus> DisableTotpAsync(User user, DisableTOTPRequest request);
 
         /// <summary>
         /// Az összes létező láda adatainak lekérdezése.
         /// </summary>
         /// <returns>Egy listát, ami tartalmazza az összes láda adatait.</returns>
-        public Task<List<CaseResponse>> GetCases();
+        public Task<List<CaseResponse>> GetCasesAsync();
 
         /// <summary>
         /// Egy láda kinyitása.
@@ -78,7 +78,7 @@ namespace csgo.Services
         /// <param name="user">A kérelmet küldő felhasználó.</param>
         /// <param name="caseId">A láda azonosítója.</param>
         /// <returns>A megszerzett tárgy adatait.</returns>
-        public Task<ItemResponse> OpenCase(User user, int caseId);
+        public Task<ItemResponse> OpenCaseAsync(User user, int caseId);
 
         /// <summary>
         /// Egy tárgy eladása.
@@ -86,7 +86,7 @@ namespace csgo.Services
         /// <param name="user">A kérelmet küldő felhasználó.</param>
         /// <param name="inventoryId">A tárgy leltárazonosítója.</param>
         /// <returns>Az eladás eredményét.</returns>
-        public Task<ActionStatus> SellItem(User user, int inventoryId);
+        public Task<ActionStatus> SellItemAsync(User user, int inventoryId);
 
         /// <summary>
         /// Egy vagy több tárgy kikérése.
@@ -94,7 +94,7 @@ namespace csgo.Services
         /// <param name="user">A kérelmet küldő felhasználó.</param>
         /// <param name="request">A tárgyak leltárazonosítói.</param>
         /// <returns>A kikérés eredményét.</returns>
-        public Task<ActionStatus> WithdrawItems(User user, ItemWithdrawRequest request);
+        public Task<ActionStatus> WithdrawItemsAsync(User user, ItemWithdrawRequest request);
 
         /// <summary>
         /// Egyenleg feltöltése.
@@ -102,14 +102,14 @@ namespace csgo.Services
         /// <param name="user">A kérelmet küldő felhasználó.</param>
         /// <param name="amount">A feltöltendő összeg.</param> 
         /// <returns>A feltöltés eredményét.</returns>
-        public Task<ActionStatus> Deposit(User user, double amount);
+        public Task<ActionStatus> DepositAsync(User user, double amount);
         
         /// <summary>
         /// Visszaad egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgy(akat).
         /// </summary>
         /// <param name="request">A tárgy(ak) leltárazonosítójai, és a szorzó.</param>
         /// <returns>Egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgyat.</returns>
-        public Task<ActionStatus> GetUpgradeItems(ItemUpgradeListRequest request);
+        public Task<ActionStatus> GetUpgradeItemsAsync(ItemUpgradeListRequest request);
        
         /// <summary>
         /// Egy tárgy továbbfejlesztése
@@ -117,7 +117,7 @@ namespace csgo.Services
         /// <param name="user">A kérelmet küldő felhasználó.</param>
         /// <param name="request">A tárgy(ak) leltárazonosítójai, a kért tárgy azonosítója, és a szorzó.</param>
         /// <returns>Visszaadja a fejleszett tárgya adatait ha sikerült, különben null.</returns>
-        public Task<ActionStatus> UpgradeItem(User user, ItemUpgradeRequest request);
+        public Task<ActionStatus> UpgradeItemAsync(User user, ItemUpgradeRequest request);
 
         /// <summary>
         /// Napi jutalom kiváltása.
@@ -125,7 +125,7 @@ namespace csgo.Services
         /// <param name="user">A kérelmet küldő felhasználó.</param>
         /// <returns>A napi jutalom mennyiségét.</returns>
         
-        public Task<ActionStatus> ClaimDailyReward(User user);
+        public Task<ActionStatus> ClaimDailyRewardAsync(User user);
 
         /// <summary>
         /// Csatlakozás egy jelenleg aktív nyereményjátékhoz.
@@ -134,33 +134,33 @@ namespace csgo.Services
         /// <param name="id">A csatlakozandó nyereményjáték azonosítója.</param>
         /// <returns>A csatlakozás eredményét.</returns>
 
-        public Task<ActionStatus> JoinGiveaway(User user, int id);
+        public Task<ActionStatus> JoinGiveawayAsync(User user, int id);
 
         /// <summary>
         /// A közelgő nyereményjátékok adatainak lekérése.
         /// </summary>
         /// <returns>A közelgő nyereményjátékok adatait.</returns>
-        public Task<List<CurrentGiveawayResponse>> GetGiveaways();
+        public Task<List<CurrentGiveawayResponse>> GetGiveawaysAsync();
 
         /// <summary>
         /// A múltbeli nyereményjátékok adatainak lekérése.
         /// </summary>
         /// <returns>A múltbeli nyereményjátékok adatait.</returns>
-        public Task<List<PastGiveawayResponse>> GetPastGiveaways();
+        public Task<List<PastGiveawayResponse>> GetPastGiveawaysAsync();
 
         /// <summary>
         /// Új láda létrehozása.
         /// </summary>
         /// <param name="details">A láda leírása.</param>
         /// <returns>A láda leírását.</returns>
-        public Task<ActionStatus> AddCase(CaseRecord details);
+        public Task<ActionStatus> AddCaseAsync(CaseRecord details);
 
         /// <summary>
         /// Létező láda törlése
         /// </summary>
         /// <param name="caseId">A láda azonosítója.</param>
         /// <returns>A törlés eredményét.</returns>
-        public Task<ActionStatus> DeleteCase(int caseId);
+        public Task<ActionStatus> DeleteCaseAsync(int caseId);
 
         /// <summary>
         /// Létező láda módosítása
@@ -168,7 +168,7 @@ namespace csgo.Services
         /// <param name="caseId">A módosítandó láda azonosítója.</param>
         /// <param name="details">A láda új adatai.</param>
         /// <returns>A láda új adatait.</returns>
-        public Task<ActionStatus> UpdateCase(int caseId, CaseRecord details);
+        public Task<ActionStatus> UpdateCaseAsync(int caseId, CaseRecord details);
 
         /// <summary>
         /// Hozzáad egy tárgyat egy ládához.
@@ -176,7 +176,7 @@ namespace csgo.Services
         /// <param name="caseId">A módosítandó láda azonosítója.</param>
         /// <param name="itemId">A hozzáadandó tárgy azonosítója.</param>
         /// <returns>A láda frissített adatait.</returns>
-        public Task<ActionStatus> AddCaseItem(int caseId, int itemId);
+        public Task<ActionStatus> AddCaseItemAsync(int caseId, int itemId);
 
         /// <summary>
         /// Eltávolít egy tárgyat egy ládából.
@@ -184,21 +184,21 @@ namespace csgo.Services
         /// <param name="caseId">A módosítandó láda azonosítója.</param>
         /// <param name="itemId">A eltávolítandó tárgy azonosítója.</param>
         /// <returns>A láda frissített adatait.</returns>
-        public Task<ActionStatus> DeleteCaseItem(int caseId, int itemId);
+        public Task<ActionStatus> DeleteCaseItemAsync(int caseId, int itemId);
 
         /// <summary>
         /// Új nyereményjáték létrehozása.
         /// </summary>
         /// <param name="details">A nyereményjáték leírása.</param>
         /// <returns>A nyereményjáték leírását.</returns>
-        public Task<CurrentGiveawayResponse> AddGiveaway(GiveawayRecord details);
+        public Task<CurrentGiveawayResponse> AddGiveawayAsync(GiveawayRecord details);
 
         /// <summary>
         /// Létező nyeremenyjáték törlése
         /// </summary>
         /// <param name="giveawayId">A nyereményjáték azonosítója.</param>
         /// <returns>A törlés eredményét.</returns>
-        public Task<ActionStatus> DeleteGiveaway(int giveawayId);
+        public Task<ActionStatus> DeleteGiveawayAsync(int giveawayId);
 
         /// <summary>
         /// Létező nyereményjáték adatainak módosítása.
@@ -206,27 +206,27 @@ namespace csgo.Services
         /// <param name="giveawayId">A nyereményjáték azonosítója.</param>
         /// <param name="details">A nyereményjáték új adatai.</param>
         /// <returns>A nyereményjáték új adatait.</returns>
-        public Task<CurrentGiveawayResponse> UpdateGiveaway(int giveawayId, GiveawayRecord details);
+        public Task<CurrentGiveawayResponse> UpdateGiveawayAsync(int giveawayId, GiveawayRecord details);
 
         /// <summary>
         /// Új tárgy létrehozása.
         /// </summary>
         /// <param name="details">A tárgy leírása.</param>
         /// <returns>A tárgy leírását.</returns>
-        public Task<ItemResponse> AddItem(ItemRecord details);
+        public Task<ItemResponse> AddItemAsync(ItemRecord details);
 
         /// <summary>
         /// Egy létező tárgy törlése
         /// </summary>
         /// <param name="itemId">A tárgy azonosítója.</param>
         /// <returns>A törlés eredményét.</returns>
-        public Task<ActionStatus> DeleteItem(int itemId);
+        public Task<ActionStatus> DeleteItemAsync(int itemId);
 
         /// <summary>
         /// Az összes létező felhasználó adatainak lekérdezése.
         /// </summary>
         /// <returns>Egy listát, ami tartalmazza az összes felhasználó adatait.</returns>
-        public Task<List<UserResponse>> GetUsers();
+        public Task<List<UserResponse>> GetUsersAsync();
 
         /// <summary>
         /// Egy létező felhasználó adatainak módosítása
@@ -234,7 +234,7 @@ namespace csgo.Services
         /// <param name="userId">A felhasználó azonosítója.</param>
         /// <param name="details">A felhasználó új adatai.</param>
         /// <returns>A felhasználó frissített adatait.</returns>
-        public Task<UserResponse> UpdateUser(int userId, UserEditRecord details);
+        public Task<UserResponse> UpdateUserAsync(int userId, UserEditRecord details);
 
         /// <summary>
         /// Hozzáad egy tárgyat egy felhasználó leltárához.
@@ -242,7 +242,7 @@ namespace csgo.Services
         /// <param name="userId">A felhasználó azonosítója.</param>
         /// <param name="itemId">A hozzáadandó tárgy azonosítója.</param>
         /// <returns>A felhasználó leltárának frissített adatait.</returns>
-        public Task<ActionStatus> AddInventoryItem(int userId, int itemId);
+        public Task<ActionStatus> AddInventoryItemAsync(int userId, int itemId);
 
         /// <summary>
         /// Eltávolít egy tárgyat egy felhasználó leltárából.
@@ -250,7 +250,7 @@ namespace csgo.Services
         /// <param name="userId">A felhasználó azonosítója.</param>
         /// <param name="itemId">A hozzáadandó tárgy azonosítója.</param>
         /// <returns>A felhasználó leltárának frissített adatait.</returns>
-        public Task<ActionStatus> DeleteInventoryItem(int userId, int itemId);
+        public Task<ActionStatus> DeleteInventoryItemAsync(int userId, int itemId);
 
         /// <summary>
         /// Létező tárgy módosítása
@@ -258,13 +258,13 @@ namespace csgo.Services
         /// <param name="itemId">A módosítandó tárgy azonosítója.</param>
         /// <param name="details">A tárgy új adatai.</param>
         /// <returns>A tárgy frissített adatait.</returns>
-        public Task<ActionStatus> UpdateItem(int itemId, ItemRecord details);
+        public Task<ActionStatus> UpdateItemAsync(int itemId, ItemRecord details);
 
         /// <summary>
         /// Kép feltöltése
         /// </summary>
         /// <param name="image">A feltöltendő kép.</param>
         /// <returns>A kép elérési útját.</returns>
-        public Task<ActionStatus> ImageUpload(IFormFile image);
+        public Task<ActionStatus> UploadImageAsync(IFormFile image);
     }
 }
