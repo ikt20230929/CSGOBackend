@@ -705,7 +705,7 @@ namespace csgo.Controllers
         [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
         [ProducesResponseType(typeof(void), StatusCodes.Status409Conflict)]
         [Authorize]
-        public async Task<ActionResult<ActionStatus>> GetUpgradeItems(ItemWithdrawRequest request)
+        public async Task<ActionResult<ActionStatus>> GetUpgradeItems(ItemUpgradeListRequest request)
         {
             User user = await context.Users.FirstAsync(x => x.Username == User.Identity!.Name);
 

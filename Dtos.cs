@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
+using Fido2NetLib;
 using csgo.Models;
 
 namespace csgo
@@ -112,6 +113,13 @@ namespace csgo
         /// <param name="Multiplier">A fejlesztéshez használt szorzó</param>
         /// <param name="Target">A második tárgy (lehet nulla)</param>
         public record ItemUpgradeRequest([Required] List<int> Items, [Required] int Multiplier, [Required] int Target);
+
+        /// <summary>
+        /// WebAuthn attesztálási kérelem
+        /// </summary>
+        /// <param name="Mode">Az attesztálási mód (1. vagy 2.)</param>
+        /// <param name="Response">A WebAuthn válasz (csak 2. mód esetén)</param>
+        public record WebauthnAttestationRequest([Required] int Mode, [Optional] AuthenticatorAttestationRawResponse Response);
 
         /// <summary>
         /// Egy állapot üzenet leírása
