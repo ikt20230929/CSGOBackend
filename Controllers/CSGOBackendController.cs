@@ -1347,6 +1347,9 @@ namespace csgo.Controllers
                 context.Userinventories.Remove(inventoryItem);
             }
 
+            context.Items.Remove(item);
+            await context.SaveChangesAsync();
+
             return NoContent();
         }
 
