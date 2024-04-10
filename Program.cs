@@ -8,6 +8,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Reflection;
 using Serilog;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using csgo.Services;
 
 namespace csgo
 {
@@ -59,6 +60,7 @@ namespace csgo
             var builder = WebApplication.CreateBuilder(args);
             Globals.Config = builder.Configuration.GetSection("Settings").Get<Config>() ?? throw new Exception("Failed to load config, make sure appsettings.json exists.");
             builder.Host.UseSerilog((context, configuration) => configuration.ReadFrom.Configuration(context.Configuration));
+            builder.Services.AddScoped<ICsgoBackendService, CSGOBackendService>();
             builder.Services.AddDbContext<CsgoContext>();
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
             {

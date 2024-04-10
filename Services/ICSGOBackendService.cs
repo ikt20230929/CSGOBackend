@@ -6,7 +6,7 @@ namespace csgo.Services
     /// <summary>
     /// Backend szolgáltatás interfész.
     /// </summary>
-    public interface ICsgoBackendController
+    public interface ICsgoBackendService
     {
         /// <summary>
         /// Új felhasználó regisztrálása.
@@ -33,8 +33,9 @@ namespace csgo.Services
         /// Egy meglévő felhasználó bejelentkeztetése.
         /// </summary>
         /// <param name="login">Egy "Login" rekord, ami a felhasználó nevét, és jelszavát tartalmazza, és ha be van kapcsolva, akkor a két faktoros belépés adatait is.</param>
+        /// <param name="jsonOptions">A WebAuthn beállítások JSON formátumban. (opcionális)</param>
         /// <returns>Egy új access-refresh token párt.</returns>
-        public Task<ActionStatus> LoginUserAsync(LoginRequest login);
+        public Task<ActionStatus> LoginUserAsync(LoginRequest login, string? jsonOptions = null);
 
         /// <summary>
         /// WebAuthn attesztáció
@@ -73,12 +74,18 @@ namespace csgo.Services
         public Task<List<CaseResponse>> GetCasesAsync();
 
         /// <summary>
+        /// Az összes létező tárgy adatainak lekérdezése.
+        /// </summary>
+        /// <returns>Egy listát, ami tartalmazza az összes tárgy adatait.</returns>
+        public Task<List<ItemResponse>> GetItemsAsync();
+
+        /// <summary>
         /// Egy láda kinyitása.
         /// </summary>
         /// <param name="user">A kérelmet küldő felhasználó.</param>
         /// <param name="caseId">A láda azonosítója.</param>
-        /// <returns>A megszerzett tárgy adatait.</returns>
-        public Task<ItemResponse> OpenCaseAsync(User user, int caseId);
+        /// <returns>A ládanyitás eredményét</returns>
+        public Task<ActionStatus> OpenCaseAsync(User user, int caseId);
 
         /// <summary>
         /// Egy tárgy eladása.
@@ -191,7 +198,7 @@ namespace csgo.Services
         /// </summary>
         /// <param name="details">A nyereményjáték leírása.</param>
         /// <returns>A nyereményjáték leírását.</returns>
-        public Task<CurrentGiveawayResponse> AddGiveawayAsync(GiveawayRecord details);
+        public Task<ActionStatus> AddGiveawayAsync(GiveawayRecord details);
 
         /// <summary>
         /// Létező nyeremenyjáték törlése
@@ -206,7 +213,7 @@ namespace csgo.Services
         /// <param name="giveawayId">A nyereményjáték azonosítója.</param>
         /// <param name="details">A nyereményjáték új adatai.</param>
         /// <returns>A nyereményjáték új adatait.</returns>
-        public Task<CurrentGiveawayResponse> UpdateGiveawayAsync(int giveawayId, GiveawayRecord details);
+        public Task<ActionStatus> UpdateGiveawayAsync(int giveawayId, GiveawayRecord details);
 
         /// <summary>
         /// Új tárgy létrehozása.
@@ -229,12 +236,19 @@ namespace csgo.Services
         public Task<List<UserResponse>> GetUsersAsync();
 
         /// <summary>
+        /// Egy létező felhasználó lekérése felhasználónév alapján.
+        /// </summary>
+        /// <param name="username">A felhasználó felhasználóneve.</param>
+        /// <returns>A felhasználó adatait.</returns>
+        public Task<ActionStatus> GetUserAsync(string username);
+
+        /// <summary>
         /// Egy létező felhasználó adatainak módosítása
         /// </summary>
         /// <param name="userId">A felhasználó azonosítója.</param>
         /// <param name="details">A felhasználó új adatai.</param>
         /// <returns>A felhasználó frissített adatait.</returns>
-        public Task<UserResponse> UpdateUserAsync(int userId, UserEditRecord details);
+        public Task<ActionStatus> UpdateUserAsync(int userId, UserEditRecord details);
 
         /// <summary>
         /// Hozzáad egy tárgyat egy felhasználó leltárához.
@@ -266,5 +280,12 @@ namespace csgo.Services
         /// <param name="image">A feltöltendő kép.</param>
         /// <returns>A kép elérési útját.</returns>
         public Task<ActionStatus> UploadImageAsync(IFormFile image);
+
+        /// <summary>
+        /// Tokenek generálása
+        /// </summary>
+        /// <param name="user">A felhasználó</param>
+        /// <returns>Egy access-refresh token párt</returns>
+        public (string accessToken, string refreshToken) GenerateTokens(User user);
     }
 }
