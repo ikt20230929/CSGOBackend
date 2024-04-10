@@ -20,14 +20,14 @@ namespace csgo.Services
         /// </summary>
         /// <param name="user">A felhasználó.</param>
         /// <returns>A felhasználó felhasználónevét, és a jelenlegi egyenlegét.</returns>
-        public Task<UserResponse> GetProfileAsync(User user);
+        public Task<ActionStatus> GetProfileAsync(User user);
 
         /// <summary>
         /// Egy felhasználó leltárában lévő tárgyak lekérése.
         /// </summary>
         /// <param name="user">A felhasználó.</param>
         /// <returns>A felhasználó leltárában lévő tárgyak listáját.</returns>
-        public Task<List<InventoryItemResponse>> GetInventoryAsync(User user);
+        public Task<ActionStatus> GetInventoryAsync(User user);
 
         /// <summary>
         /// Egy meglévő felhasználó bejelentkeztetése.
@@ -40,9 +40,11 @@ namespace csgo.Services
         /// <summary>
         /// WebAuthn attesztáció
         /// </summary>
+        /// <param name="user">A kérelmet küldő felhasználó</param>
         /// <param name="details">A WebAuthn attesztáció lépése. (1. vagy 2. lépés)</param>
+        /// <param name="jsonOptions">Az attesztálási opciók JSON formátumban (csak 2. mód esetén)</param>
         /// <returns>A WebAuthn attesztáció beállításait.</returns>
-        public Task<ActionStatus> WebAuthnAttestationAsync(WebauthnAttestationRequest details);
+        public Task<ActionStatus> WebAuthnAttestationAsync(User user, WebauthnAttestationRequest details, string? jsonOptions = null);
 
         /// <summary>
         /// TOTP kulcs generálása
@@ -71,13 +73,13 @@ namespace csgo.Services
         /// Az összes létező láda adatainak lekérdezése.
         /// </summary>
         /// <returns>Egy listát, ami tartalmazza az összes láda adatait.</returns>
-        public Task<List<CaseResponse>> GetCasesAsync();
+        public Task<ActionStatus> GetCasesAsync();
 
         /// <summary>
         /// Az összes létező tárgy adatainak lekérdezése.
         /// </summary>
         /// <returns>Egy listát, ami tartalmazza az összes tárgy adatait.</returns>
-        public Task<List<ItemResponse>> GetItemsAsync();
+        public Task<ActionStatus> GetItemsAsync();
 
         /// <summary>
         /// Egy láda kinyitása.
@@ -114,9 +116,10 @@ namespace csgo.Services
         /// <summary>
         /// Visszaad egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgy(akat).
         /// </summary>
+        /// <param name="user">A kérelmet küldő felhasználó.</param>
         /// <param name="request">A tárgy(ak) leltárazonosítójai, és a szorzó.</param>
         /// <returns>Egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgyat.</returns>
-        public Task<ActionStatus> GetUpgradeItemsAsync(ItemUpgradeListRequest request);
+        public Task<ActionStatus> GetUpgradeItemsAsync(User user, ItemUpgradeListRequest request);
        
         /// <summary>
         /// Egy tárgy továbbfejlesztése
@@ -146,14 +149,15 @@ namespace csgo.Services
         /// <summary>
         /// A közelgő nyereményjátékok adatainak lekérése.
         /// </summary>
+        /// <param name="user">A kérelmet küldő felhasználó.</param>
         /// <returns>A közelgő nyereményjátékok adatait.</returns>
-        public Task<List<CurrentGiveawayResponse>> GetGiveawaysAsync();
+        public Task<ActionStatus> GetGiveawaysAsync(User user);
 
         /// <summary>
         /// A múltbeli nyereményjátékok adatainak lekérése.
         /// </summary>
         /// <returns>A múltbeli nyereményjátékok adatait.</returns>
-        public Task<List<PastGiveawayResponse>> GetPastGiveawaysAsync();
+        public Task<ActionStatus> GetPastGiveawaysAsync();
 
         /// <summary>
         /// Új láda létrehozása.
@@ -220,7 +224,7 @@ namespace csgo.Services
         /// </summary>
         /// <param name="details">A tárgy leírása.</param>
         /// <returns>A tárgy leírását.</returns>
-        public Task<ItemResponse> AddItemAsync(ItemRecord details);
+        public Task<ActionStatus> AddItemAsync(ItemRecord details);
 
         /// <summary>
         /// Egy létező tárgy törlése
@@ -233,7 +237,7 @@ namespace csgo.Services
         /// Az összes létező felhasználó adatainak lekérdezése.
         /// </summary>
         /// <returns>Egy listát, ami tartalmazza az összes felhasználó adatait.</returns>
-        public Task<List<UserResponse>> GetUsersAsync();
+        public Task<ActionStatus> GetUsersAsync();
 
         /// <summary>
         /// Egy létező felhasználó lekérése felhasználónév alapján.
