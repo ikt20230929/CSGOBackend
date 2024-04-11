@@ -133,8 +133,8 @@ namespace csgo
         /// WebAuthn attesztálási kérelem
         /// </summary>
         /// <param name="Mode">Az attesztálási mód (1. vagy 2.)</param>
-        /// <param name="Response">A WebAuthn válasz (csak 2. mód esetén)</param>
-        public record WebauthnAttestationRequest([Required] WebAuthnAttestationMode Mode, [Optional] AuthenticatorAttestationRawResponse? Response);
+        /// <param name="Data">A WebAuthn válasz (csak 2. mód esetén)</param>
+        public record WebauthnAttestationRequest([Required] WebAuthnAttestationMode Mode, [Optional] AuthenticatorAttestationRawResponse? Data);
 
         /// <summary>
         /// Egy állapot üzenet leírása

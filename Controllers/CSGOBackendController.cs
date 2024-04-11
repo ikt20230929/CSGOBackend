@@ -162,7 +162,7 @@ namespace csgo.Controllers
                 }
                 
                 case "UI": {
-                    if(login.Mfa!.MfaType == MfaType.WebAuthnOptions) {
+                    if(login.Mfa != null && login.Mfa.MfaType == MfaType.WebAuthnOptions) {
                         HttpContext.Session.SetString("fido2.attestationOptions", (string)loginRequest.Message!);
                     }
 
@@ -179,12 +179,12 @@ namespace csgo.Controllers
         }
 
         /// <summary>
-        /// WebAuthn attesztáció (1. lépés).
+        /// WebAuthn attesztáció
         /// </summary>
         /// <returns>A WebAuthn attesztáció beállításait.</returns>
         /// <response code="200">Visszaadja a WebAuthn attesztáció beállításait.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
-        [HttpGet]
+        [HttpPost]
         [Authorize]
         [Route("webauthn")]
         [ProducesResponseType(typeof(CredentialCreateOptions), StatusCodes.Status200OK)]

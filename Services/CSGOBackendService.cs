@@ -439,7 +439,7 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> GetUserAsync(string username)
         {
-            User user = await context.Users.FirstAsync(x => x.Username == username);
+            User? user = await context.Users.FirstOrDefaultAsync(x => x.Username == username);
 
             if (user == null)
             {
@@ -481,7 +481,10 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> LoginUserAsync(LoginRequest login, string? jsonOptions = null)
         {
-            User storedUser = (await GetUserAsync(login.Username)).Message!;
+            var request = await GetUserAsync(login.Username);
+            if (request.Status == "ERR") return request;
+
+            User storedUser = request.Message!;
 
             string? twoFactorScenario = null;
 
@@ -573,7 +576,7 @@ namespace csgo.Services
         {
             if (!BCrypt.Net.BCrypt.Verify(password, storedUser.PasswordHash))
             {
-                return new ActionStatus { Status = "ERR", Message = "InvalidCredentials" };
+                return new ActionStatus { Status = "ERR", Message = "InvalidCredential" };
             }
 
             var (accessToken, refreshToken) = GenerateTokens(storedUser);
@@ -925,11 +928,11 @@ namespace csgo.Services
                     {
                         try
                         {
-                            if (details.Response == null) return new ActionStatus { Status = "ERR", Message = "Érvénytelen válasz." };
+                            if (details.Data == null) return new ActionStatus { Status = "ERR", Message = "Érvénytelen válasz." };
                             if (jsonOptions == null) return new ActionStatus { Status = "ERR", Message = "Érvénytelen művelet." };
                             var options = CredentialCreateOptions.FromJson(jsonOptions);
 
-                            var fidoCredentials = await fido2.MakeNewCredentialAsync(details.Response, options, IsCredentialIdUniqueToUser, CancellationToken.None);
+                            var fidoCredentials = await fido2.MakeNewCredentialAsync(details.Data, options, IsCredentialIdUniqueToUser, CancellationToken.None);
 
                             if (fidoCredentials.Result == null || fidoCredentials.Status != "ok") return new ActionStatus { Status = "ERR", Message = "Érvénytelen válasz." };
 

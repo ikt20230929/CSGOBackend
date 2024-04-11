@@ -30,9 +30,15 @@ namespace csgo
                     keys.Add(key);
                 }
             }
+
             foreach(var key in keys)
             {
                 context.SchemaRepository.Schemas.Remove(key);
+            }
+
+            if (schema.Properties.ContainsKey("webAuthnAssertionResponse"))
+            {
+                schema.Properties.Remove("webAuthnAssertionResponse");
             }
         }
     }
