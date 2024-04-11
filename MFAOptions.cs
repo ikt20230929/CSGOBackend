@@ -40,7 +40,7 @@ namespace csgo
         /// WebAuthn attesztáció válasz
         /// </summary>
         [JsonPropertyName("webAuthnAssertionResponse")]
-        internal AuthenticatorAssertionRawResponse? WebAuthnAssertationResponse { get; set; }
+        public AuthenticatorAssertionRawResponse? WebAuthnAssertationResponse { get; set; }
 
         /// <summary>
         /// Két faktoros belépés típusa

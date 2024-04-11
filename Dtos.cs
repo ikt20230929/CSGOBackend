@@ -115,11 +115,26 @@ namespace csgo
         public record ItemUpgradeRequest([Required] List<int> Items, [Required] int Multiplier, [Required] int Target);
 
         /// <summary>
+        /// WebAuthn attesztáció módok
+        /// </summary>
+        public enum WebAuthnAttestationMode {
+            /// <summary>
+            /// Opciók lekérdezése
+            /// </summary>
+            OPTIONS = 1,
+
+            /// <summary>
+            /// Attesztálás
+            /// </summary>
+            ATTESTATION = 2
+        }
+
+        /// <summary>
         /// WebAuthn attesztálási kérelem
         /// </summary>
         /// <param name="Mode">Az attesztálási mód (1. vagy 2.)</param>
-        /// <param name="Response">A WebAuthn válasz (csak 2. mód esetén)</param>
-        public record WebauthnAttestationRequest([Required] int Mode, [Optional] AuthenticatorAttestationRawResponse Response);
+        /// <param name="Data">A WebAuthn válasz (csak 2. mód esetén)</param>
+        public record WebauthnAttestationRequest([Required] WebAuthnAttestationMode Mode, [Optional] AuthenticatorAttestationRawResponse? Data);
 
         /// <summary>
         /// Egy állapot üzenet leírása
@@ -132,7 +147,7 @@ namespace csgo
             /// <summary>
             /// Részletek
             /// </summary>
-            [Required][JsonPropertyName("message")] public string? Message { get; init; }
+            [Required][JsonPropertyName("message")] public dynamic? Message { get; init; }
         }
 
         /// <summary>
