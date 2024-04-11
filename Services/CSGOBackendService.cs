@@ -374,6 +374,8 @@ namespace csgo.Services
                 GiveawayDescription = giveaway.GiveawayDescription!,
                 GiveawayDate = giveaway.GiveawayDate,
                 GiveawayItem = giveaway.Item!.ItemName,
+                GiveawayItemAssetUrl = giveaway.Item!.ItemAssetUrl,
+                GiveawayItemSkinName = giveaway.Item!.ItemSkinName,
                 GiveawayJoined = giveaway.Users.Contains(user)
             }).ToList();
 
@@ -399,6 +401,8 @@ namespace csgo.Services
             {
                 GiveawayDescription = giveaway.GiveawayDescription,
                 GiveawayItem = giveaway.Item?.ItemName,
+                GiveawayItemAssetUrl = giveaway.Item?.ItemAssetUrl,
+                GiveawayItemSkinName = giveaway.Item?.ItemSkinName,
                 GiveawayName = giveaway.GiveawayName,
                 GiveawayId = giveaway.GiveawayId,
                 GiveawayDate = giveaway.GiveawayDate,

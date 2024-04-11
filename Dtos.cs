@@ -329,6 +329,16 @@ namespace csgo
             [Required][JsonPropertyName("giveawayItem")] public string? GiveawayItem { get; init; }
 
             /// <summary>
+            /// A nyereményjátékban nyerhető tárgy skinének neve
+            /// </summary>
+            [Required][JsonPropertyName("giveawayItemSkinName")] public string? GiveawayItemSkinName { get; init; }
+
+            /// <summary>
+            /// A nyereményjátékban nyerhető tárgy képének URL-je
+            /// </summary>
+            [Required][JsonPropertyName("giveawayItemAssetUrl")] public string? GiveawayItemAssetUrl { get; init; }
+
+            /// <summary>
             /// Megadja, hogy a jelenlegi felhasználó részt vesz e a nyereményjátékban
             /// </summary>
             [Required][JsonPropertyName("giveawayJoined")] public bool GiveawayJoined { get; init; }
@@ -358,6 +368,16 @@ namespace csgo
             /// A nyereményjáték kezdetének ideje
             /// </summary>
             [Required][JsonPropertyName("giveawayItem")] public string? GiveawayItem { get; init; }
+
+            /// <summary>
+            /// A nyereményjátékban nyerhető tárgy skinének neve
+            /// </summary>
+            [Required][JsonPropertyName("giveawayItemSkinName")] public string? GiveawayItemSkinName { get; init; }
+
+            /// <summary>
+            /// A nyereményjátékban nyerhető tárgy képének URL-je
+            /// </summary>
+            [Required][JsonPropertyName("giveawayItemAssetUrl")] public string? GiveawayItemAssetUrl { get; init; }
 
             /// <summary>
             /// A nyereményjáték nyertesének neve
