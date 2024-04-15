@@ -107,6 +107,12 @@ namespace csgo
         public record ItemWithdrawRequest([Required] List<int> Items);
 
         /// <summary>
+        /// Egyenleg feltöltési kérelem
+        /// </summary>
+        /// <param name="Amount">A feltölteni kívánt összeg</param>
+        public record DepositRequest([Required] double Amount);
+
+        /// <summary>
         /// Egy tárgy feljesztési kérelem
         /// </summary>
         /// <param name="Items">A fejlesztendő tárgy(ak) azonosítója(i)</param>

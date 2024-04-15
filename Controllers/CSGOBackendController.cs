@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using System.Text.Json.Serialization;
 using csgo.Models;
 using csgo.Services;
 using Fido2NetLib;
@@ -402,7 +403,7 @@ namespace csgo.Controllers
         /// <summary>
         /// Egyenleg feltöltése.
         /// </summary>
-        /// <param name="amount">A feltöltendő összeg.</param> 
+        /// <param name="deposit">A feltöltés részletei.</param> 
         /// <returns>A feltöltés eredményét</returns>
         /// <response code="200">A feltöltés sikeres volt.</response>
         /// <response code="400">A feltöltés sikertelen volt.</response>
@@ -415,10 +416,10 @@ namespace csgo.Controllers
         [Produces("application/json")]
         [Consumes("application/json")]
         [Authorize]
-        public async Task<ActionResult> Deposit(double amount)
+        public async Task<ActionResult> Deposit(DepositRequest deposit)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            var response = await service.DepositAsync(user, amount);
+            var response = await service.DepositAsync(user, deposit.Amount);
 
             return response.Status == "OK" ? Ok(response) : BadRequest(response);
         }
