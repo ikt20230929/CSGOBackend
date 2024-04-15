@@ -1,6 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
-using System.Text.Json.Serialization;
 using csgo.Models;
 using csgo.Services;
 using Fido2NetLib;
