@@ -972,6 +972,51 @@ namespace csgo.Services
         }
 
         /// <inheritdoc/>
+        public async Task<ActionStatus> DisableWebauthnAsync(User user, WebauthnDisableRequest request, string? jsonOptions = null) {
+            if (!user.WebauthnEnabled) return new ActionStatus { Status = "ERR", Message = "A WebAuthn nincs engedélyezve." };
+
+            switch (request.Mode)
+            {
+                case WebAuthnAttestationMode.OPTIONS: {
+                    var credential = JsonSerializer.Deserialize<StoredCredential>(user.WebauthnPublicKey!);
+                    var options = fido2.GetAssertionOptions([credential!.Descriptor], UserVerificationRequirement.Discouraged);
+                    return new ActionStatus { Status = "OK", Message = options.ToJson() };
+                }
+
+                case WebAuthnAttestationMode.ATTESTATION: {
+                        if (request.Data == null) return new ActionStatus { Status = "ERR", Message = "Érvénytelen művelet." };
+
+                        var options = AssertionOptions.FromJson(jsonOptions);
+                        var credential = JsonSerializer.Deserialize<StoredCredential>(user.WebauthnPublicKey!);
+
+                        if (credential == null) return new ActionStatus { Status = "ERR", Message = "Érvénytelen művelet." };
+
+                        var result = await fido2.MakeAssertionAsync(
+                            request.Data,
+                            options,
+                            credential.PublicKey,
+                            credential.DevicePublicKeys,
+                            credential.SignCount,
+                            IsUserHandleOwnerOfCredentialId);
+
+                        if (result.Status != "ok") return new ActionStatus { Status = "ERR", Message = "A hitelesítés nem sikerült." };
+
+                        user.WebauthnEnabled = false;
+                        user.WebauthnCredentialId = null;
+                        user.WebauthnPublicKey = null;
+
+                        await context.SaveChangesAsync();
+
+                        return new ActionStatus { Status = "OK", Message = "A WebAuthn sikeresen kikapcsolva lett." };
+                }
+
+                default: {
+                    return new ActionStatus { Status = "ERR", Message = "Érvénytelen művelet." };
+                }
+            }
+        }
+
+        /// <inheritdoc/>
         public async Task<ActionStatus> WithdrawItemsAsync(User user, ItemWithdrawRequest request)
         {
             foreach (var item in request.Items)

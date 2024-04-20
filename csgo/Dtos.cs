@@ -143,6 +143,14 @@ namespace csgo
         public record WebauthnAttestationRequest([Required] WebAuthnAttestationMode Mode, [Optional] AuthenticatorAttestationRawResponse? Data);
 
         /// <summary>
+        /// WebAuthn kikapcsolási kérelem
+        /// </summary>
+        /// <param name="Mode">Az attesztálási mód (1. vagy 2.)</param>
+        /// <param name="Data">A WebAuthn válasz (csak 2. mód esetén)</param>
+        /// <param name="Password">A felhasználó jelenlegi jelszava (csak 2. mód esetén)</param>
+        public record WebauthnDisableRequest([Required] WebAuthnAttestationMode Mode, [Optional] AuthenticatorAssertionRawResponse? Data, [Optional] string? Password);
+
+        /// <summary>
         /// Egy állapot üzenet leírása
         /// </summary>
         public record ActionStatus {

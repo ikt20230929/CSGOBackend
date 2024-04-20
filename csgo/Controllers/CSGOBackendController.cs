@@ -53,7 +53,7 @@ namespace csgo.Controllers
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
             var response = await service.GetProfileAsync(user);
-            
+
             return Ok(response);
         }
 
@@ -140,38 +140,44 @@ namespace csgo.Controllers
         {
             ActionStatus loginRequest;
 
-            if(HttpContext.Session.GetString("fido2.attestationOptions") != null)
+            if (HttpContext.Session.GetString("fido2.attestationOptions") != null)
             {
                 loginRequest = await service.LoginUserAsync(login, HttpContext.Session.GetString("fido2.attestationOptions"));
-            }else{
+            }
+            else
+            {
                 loginRequest = await service.LoginUserAsync(login);
             }
 
             switch (loginRequest.Status)
             {
-                case "OK": {
-                    Response.Cookies.Append("refreshToken", loginRequest.Message!.Item2, new CookieOptions
+                case "OK":
                     {
-                        HttpOnly = true,
-                        SameSite = SameSiteMode.None,
-                        MaxAge = TimeSpan.FromDays(7),
-                        Secure = true
-                    });
+                        Response.Cookies.Append("refreshToken", loginRequest.Message!.Item2, new CookieOptions
+                        {
+                            HttpOnly = true,
+                            SameSite = SameSiteMode.None,
+                            MaxAge = TimeSpan.FromDays(7),
+                            Secure = true
+                        });
 
-                    return Ok(new ActionStatus { Status = "OK", Message = loginRequest.Message!.Item1 });
-                }
-                
-                case "UI": {
-                    if(login.Mfa != null && login.Mfa.MfaType == MfaType.WebAuthnOptions) {
-                        HttpContext.Session.SetString("fido2.attestationOptions", (string)loginRequest.Message!);
+                        return Ok(new ActionStatus { Status = "OK", Message = loginRequest.Message!.Item1 });
                     }
 
-                    return Unauthorized(loginRequest);
-                }
+                case "UI":
+                    {
+                        if (login.Mfa != null && login.Mfa.MfaType == MfaType.WebAuthnOptions)
+                        {
+                            HttpContext.Session.SetString("fido2.attestationOptions", (string)loginRequest.Message!);
+                        }
 
-                case "ERR": {
-                    return Unauthorized(loginRequest);
-                }
+                        return Unauthorized(loginRequest);
+                    }
+
+                case "ERR":
+                    {
+                        return Unauthorized(loginRequest);
+                    }
             }
 
             // Ennek sosem kéne megtörténnie
@@ -184,6 +190,7 @@ namespace csgo.Controllers
         /// <returns>A WebAuthn attesztáció beállításait.</returns>
         /// <response code="200">Visszaadja a WebAuthn attesztáció beállításait.</response>
         /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        /// <param name="request">WebAuthn attesztáció kérelem</param>
         [HttpPost]
         [Authorize]
         [Route("webauthn")]
@@ -195,9 +202,11 @@ namespace csgo.Controllers
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
 
-            switch(request.Mode) {
-                case WebAuthnAttestationMode.OPTIONS: {
-                    var options = await service.WebAuthnAttestationAsync(user, request);
+            switch (request.Mode)
+            {
+                case WebAuthnAttestationMode.OPTIONS:
+                    {
+                        var options = await service.WebAuthnAttestationAsync(user, request);
                         if (options.Status == "OK")
                         {
                             HttpContext.Session.SetString("fido2.attestationOptions", (string)options.Message!);
@@ -209,18 +218,75 @@ namespace csgo.Controllers
                         }
                     }
 
-                case WebAuthnAttestationMode.ATTESTATION: {
-                    if(HttpContext.Session.GetString("fido2.attestationOptions") == null) {
-                        return Unauthorized(new ActionStatus { Status = "ERR", Message = "Érvénytelen művelet" });
+                case WebAuthnAttestationMode.ATTESTATION:
+                    {
+                        if (HttpContext.Session.GetString("fido2.attestationOptions") == null)
+                        {
+                            return Unauthorized(new ActionStatus { Status = "ERR", Message = "Érvénytelen művelet" });
+                        }
+
+                        var response = await service.WebAuthnAttestationAsync(user, request, HttpContext.Session.GetString("fido2.attestationOptions"));
+                        return response.Status == "OK" ? Ok(response) : Unauthorized(response);
                     }
 
-                    var response = await service.WebAuthnAttestationAsync(user, request, HttpContext.Session.GetString("fido2.attestationOptions"));
-                    return response.Status == "OK" ? Ok(response) : Unauthorized(response);
-                }
+                default:
+                    {
+                        return BadRequest(new ActionStatus { Status = "ERR", Message = "Érvénytelen művelet" });
+                    }
+            }
+        }
 
-                default: {
-                    return BadRequest(new ActionStatus { Status = "ERR", Message = "Érvénytelen művelet" });
-                }
+        /// <summary>
+        /// WebAuthn kikapcsolása
+        /// </summary>
+        /// <returns>A kikapcsolás eredményét.</returns>
+        /// <response code="200">A WebAuthn kikapcsolása sikeres volt.</response>
+        /// <response code="400">A kikapcsolás közben hiba történt. A válaszban található a hibaüzenet.</response>
+        /// <response code="401">A felhasználó nincs bejelentkezve, vagy a munkamenete lejárt.</response>
+        /// <param name="request">WebAuthn attesztáció kérelem</param>
+        [HttpDelete]
+        [Route("webauthn")]
+        [ProducesResponseType(typeof(void), StatusCodes.Status200OK)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(typeof(void), StatusCodes.Status401Unauthorized)]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [Authorize]
+        public async Task<ActionResult<ActionStatus>> DisableWebAuthn(WebauthnDisableRequest request)
+        {
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+
+            switch (request.Mode)
+            {
+                case WebAuthnAttestationMode.OPTIONS:
+                    {
+                        var options = await service.DisableWebauthnAsync(user, request);
+                        if (options.Status == "OK")
+                        {
+                            HttpContext.Session.SetString("fido2.attestationOptions", (string)options.Message!);
+                            return Ok(options);
+                        }
+                        else
+                        {
+                            return Unauthorized(options);
+                        }
+                    }
+
+                case WebAuthnAttestationMode.ATTESTATION:
+                    {
+                        if (HttpContext.Session.GetString("fido2.attestationOptions") == null)
+                        {
+                            return Unauthorized(new ActionStatus { Status = "ERR", Message = "Érvénytelen művelet" });
+                        }
+
+                        var response = await service.DisableWebauthnAsync(user, request, HttpContext.Session.GetString("fido2.attestationOptions"));
+                        return response.Status == "OK" ? Ok(response) : Unauthorized(response);
+                    }
+
+                default:
+                    {
+                        return BadRequest(new ActionStatus { Status = "ERR", Message = "Érvénytelen művelet" });
+                    }
             }
         }
 
@@ -573,7 +639,7 @@ namespace csgo.Controllers
         public async Task<ActionResult> AddCase(CaseRecord details)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var @case = await service.AddCaseAsync(details);
             return Ok(@case);
@@ -599,7 +665,7 @@ namespace csgo.Controllers
         public async Task<ActionResult> DeleteCase(int caseId)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.DeleteCaseAsync(caseId);
             return response.Status == "OK" ? Ok(response) : NotFound(response);
@@ -627,7 +693,7 @@ namespace csgo.Controllers
         public async Task<ActionResult> UpdateCase(int caseId, CaseRecord details)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.UpdateCaseAsync(caseId, details);
 
@@ -656,7 +722,7 @@ namespace csgo.Controllers
         public async Task<ActionResult> AddCaseItem(int caseId, int itemId)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.AddCaseItemAsync(caseId, itemId);
             return response.Status == "OK" ? Ok(response) : NotFound(response);
@@ -684,7 +750,7 @@ namespace csgo.Controllers
         public async Task<ActionResult> DeleteCaseItem(int caseId, int itemId)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.DeleteCaseItemAsync(caseId, itemId);
             return response.Status == "OK" ? Ok(response) : NotFound(response);
@@ -711,7 +777,7 @@ namespace csgo.Controllers
         public async Task<ActionResult<CurrentGiveawayResponse>> AddGiveaway(GiveawayRecord details)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.AddGiveawayAsync(details);
 
@@ -738,7 +804,7 @@ namespace csgo.Controllers
         public async Task<ActionResult> DeleteGiveaway(int giveawayId)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.DeleteGiveawayAsync(giveawayId);
             return response.Status == "OK" ? Ok(response) : NotFound(response);
@@ -766,7 +832,7 @@ namespace csgo.Controllers
         public async Task<ActionResult<ActionStatus>> UpdateGiveaway(int giveawayId, GiveawayRecord details)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.UpdateGiveawayAsync(giveawayId, details);
 
@@ -792,7 +858,7 @@ namespace csgo.Controllers
         public async Task<ActionResult<ItemResponse>> AddItem(ItemRecord details)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.AddItemAsync(details);
             return Ok(response);
@@ -818,7 +884,7 @@ namespace csgo.Controllers
         public async Task<ActionResult> DeleteItem(int itemId)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.DeleteItemAsync(itemId);
             return response.Status == "OK" ? Ok(response) : NotFound(response);
@@ -842,7 +908,7 @@ namespace csgo.Controllers
         public async Task<ActionResult<ActionStatus>> GetUsers()
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             return await service.GetUsersAsync();
         }
@@ -869,7 +935,7 @@ namespace csgo.Controllers
         public async Task<ActionResult<ActionStatus>> UpdateUser(int userId, UserEditRecord details)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.UpdateUserAsync(userId, details);
             return response.Status == "OK" ? Ok(response) : BadRequest(response);
@@ -897,7 +963,7 @@ namespace csgo.Controllers
         public async Task<ActionResult> AddInventoryItem(int userId, int itemId)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.AddInventoryItemAsync(userId, itemId);
             return response.Status == "OK" ? Ok(response) : NotFound(response);
@@ -925,7 +991,7 @@ namespace csgo.Controllers
         public async Task<ActionResult> DeleteInventoryItem(int userId, int itemId)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.DeleteInventoryItemAsync(userId, itemId);
             return response.Status == "OK" ? Ok(response) : NotFound(response);
@@ -953,7 +1019,7 @@ namespace csgo.Controllers
         public async Task<ActionResult> UpdateItem(int itemId, ItemRecord details)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.UpdateItemAsync(itemId, details);
             return response.Status == "OK" ? Ok(response) : NotFound(response);
@@ -979,7 +1045,7 @@ namespace csgo.Controllers
         public async Task<IActionResult> ImageUpload(IFormFile image)
         {
             User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
-            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez."}) { StatusCode = StatusCodes.Status403Forbidden };
+            if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.UploadImageAsync(image);
             return response.Status == "OK" ? Ok(response) : BadRequest(response);

@@ -46,6 +46,16 @@ namespace csgo.Services
         /// <returns>A WebAuthn attesztáció beállításait.</returns>
         public Task<ActionStatus> WebAuthnAttestationAsync(User user, WebauthnAttestationRequest details, string? jsonOptions = null);
 
+
+        /// <summary>
+        /// WebAuthn kikapcsolása
+        /// </summary>
+        /// <returns>A kikapcsolás eredményét.</returns>
+        /// <param name="user">A kérelmet küldő felhasználó</param>
+        /// <param name="request">WebAuthn kikapcsolási kérelem</param>
+        /// <param name="jsonOptions">Az attesztálási opciók JSON formátumban</param>
+        public Task<ActionStatus> DisableWebauthnAsync(User user, WebauthnDisableRequest request, string? jsonOptions = null);
+
         /// <summary>
         /// TOTP kulcs generálása
         /// </summary>
