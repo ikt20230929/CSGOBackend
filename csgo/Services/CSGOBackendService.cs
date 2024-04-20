@@ -512,21 +512,21 @@ namespace csgo.Services
             {
                 case MfaType.Totp:
                     {
-                        if (!storedUser.TotpEnabled) return new ActionStatus { Status = "ERR", Message = "InvalidMFAMethod" };
-                        if (login.Mfa.TotpToken == null) return new ActionStatus { Status = "ERR", Message = "InvalidTotp" };
+                        if (!storedUser.TotpEnabled) return new ActionStatus { Status = "ERR", Message = "Helytelen hitelesítési mód." };
+                        if (login.Mfa.TotpToken == null) return new ActionStatus { Status = "ERR", Message = "Helytelen kód." };
                         var totp = new Totp(Base32Encoding.ToBytes(storedUser.TotpSecret));
                         bool verify = totp.VerifyTotp(login.Mfa.TotpToken, out _,
                             VerificationWindow.RfcSpecifiedNetworkDelay);
-                        return verify ? CheckPassword(login.Password, storedUser) : new ActionStatus { Status = "ERR", Message = "InvalidTotp" };
+                        return verify ? CheckPassword(login.Password, storedUser) : new ActionStatus { Status = "ERR", Message = "Helytelen kód." };
                     }
                 case MfaType.WebAuthnOptions:
                     {
-                        if (!storedUser.WebauthnEnabled) return new ActionStatus { Status = "ERR", Message = "InvalidMFAMethod" };
-                        if (storedUser.WebauthnCredentialId == null || storedUser.WebauthnPublicKey == null) return new ActionStatus { Status = "ERR", Message = "InvalidWebAuthn" };
+                        if (!storedUser.WebauthnEnabled) return new ActionStatus { Status = "ERR", Message = "Helytelen hitelesítési mód." };
+                        if (storedUser.WebauthnCredentialId == null || storedUser.WebauthnPublicKey == null) return new ActionStatus { Status = "ERR", Message = "Helytelen válasz." };
 
                         var credential = JsonSerializer.Deserialize<StoredCredential>(storedUser.WebauthnPublicKey);
 
-                        if (credential == null) return new ActionStatus { Status = "ERR", Message = "InvalidWebAuthn" };
+                        if (credential == null) return new ActionStatus { Status = "ERR", Message = "Helytelen válasz." };
 
                         var options = fido2.GetAssertionOptions([credential.Descriptor], UserVerificationRequirement.Discouraged);
 
@@ -534,13 +534,13 @@ namespace csgo.Services
                     }
                 case MfaType.WebAuthnAssertion:
                     {
-                        if (!storedUser.WebauthnEnabled) return new ActionStatus { Status = "ERR", Message = "InvalidMFAMethod" };
-                        if (storedUser.WebauthnCredentialId == null || storedUser.WebauthnPublicKey == null || login.Mfa.WebAuthnAssertationResponse == null) return new ActionStatus { Status = "ERR", Message = "InvalidWebAuthn" };
+                        if (!storedUser.WebauthnEnabled) return new ActionStatus { Status = "ERR", Message = "Helytelen hitelesítési mód." };
+                        if (storedUser.WebauthnCredentialId == null || storedUser.WebauthnPublicKey == null || login.Mfa.WebAuthnAssertationResponse == null) return new ActionStatus { Status = "ERR", Message = "Helytelen válasz." };
 
                         var options = AssertionOptions.FromJson(jsonOptions);
                         var credential = JsonSerializer.Deserialize<StoredCredential>(storedUser.WebauthnPublicKey);
 
-                        if (credential == null) return new ActionStatus { Status = "ERR", Message = "InvalidWebAuthn" };
+                        if (credential == null) return new ActionStatus { Status = "ERR", Message = "Helytelen válasz." };
 
                         var result = await fido2.MakeAssertionAsync(
                             login.Mfa.WebAuthnAssertationResponse,
@@ -550,7 +550,7 @@ namespace csgo.Services
                             credential.SignCount,
                             IsUserHandleOwnerOfCredentialId);
 
-                        if (result.Status != "ok") return new ActionStatus { Status = "ERR", Message = "InvalidWebAuthn" };
+                        if (result.Status != "ok") return new ActionStatus { Status = "ERR", Message = "Helytelen válasz." };
 
                         var storedCredential = new StoredCredential
                         {
@@ -571,7 +571,7 @@ namespace csgo.Services
                     }
                 default:
                     {
-                        return new ActionStatus { Status = "ERR", Message = "InvalidCredential" };
+                        return new ActionStatus { Status = "ERR", Message = "Helytelen felhasználónév vagy jelszó." };
                     }
             }
         }
@@ -580,7 +580,7 @@ namespace csgo.Services
         {
             if (!BCrypt.Net.BCrypt.Verify(password, storedUser.PasswordHash))
             {
-                return new ActionStatus { Status = "ERR", Message = "InvalidCredential" };
+                return new ActionStatus { Status = "ERR", Message = "Helytelen felhasználónév vagy jelszó." };
             }
 
             var (accessToken, refreshToken) = GenerateTokens(storedUser);
