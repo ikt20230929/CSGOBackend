@@ -10,11 +10,11 @@ A függőségekre vonatkozó szerzői jogi és licencadatok a [NOTICE.txt](NOTIC
 
 `git clone https://github.com/ikt20230929/CSGOBackend`
 
-3. Lépj be a mappába
+2. Lépj be a mappába
 
 `cd CSGOBackend\csgo`
 
-4. Konfigurációs fájl szerkesztése
+3. Konfigurációs fájl szerkesztése
 
 Az alkalmazás mappájában egy `appsettings.Development.json` nevű fájl található.
 
@@ -28,7 +28,7 @@ Nyisd meg, és váloztatsd meg az alábbi értékeket a környezetedhez képest:
 
 (Tipp: Ha csak helyileg teszteled az alkalmazást, akkor a ConnectionString-en kívűl valószínűleg nem kell semmi mást megváltoztatnod.)
 
-5. Futtasd az alkalmazást
+4. Futtasd az alkalmazást
 
 *(Győződj meg róla, hogy a [.NET SDK](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) telepítve van a parancs futtatása előtt!)*
 
