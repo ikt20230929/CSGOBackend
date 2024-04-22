@@ -21,7 +21,7 @@ Az alkalmazás mappájában egy `appsettings.Development.json` nevű fájl talá
 Nyisd meg, és váloztatsd meg az alábbi értékeket a környezetedhez képest:
 
 - FrontUrl -> Változtatsd meg arra az elérési útra, ahonnan a Frontend-et el lehet érni. (pl. `https://example.com`)
-- BackUrl -> Változtatsd meg arra az elérési útra, ahonnan a Backend-et el lehet érni. Maradhat `https://localhost:5000` ha a webszervered a fordított proxyzásra be van állítva!
+- BackUrl -> Változtatsd meg arra az elérési útra, ahonnan a Backend-et el lehet érni. Állítsd be `http://localhost:5000`-re (nem `https://`!) ha a webszervered a fordított proxyzásra be van állítva!
 - AccessTokenKey -> Változtatsd meg egy egyéni, véletlenszerű értékre.
 - RefreshTokenKey -> Változtatsd meg egy egyéni, véletlenszerű értékre.
 - ConnectionString -> Változtatsd meg az adatbázisod csatlakozási karakterláncára. Győződj meg róla, hogy a felhasználó rendelkezik a táblák létrehozásához és az adatok beszúrásához szükséges jogosultságokkal.
