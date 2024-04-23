@@ -101,7 +101,7 @@ namespace csgo
                 options.AddPolicy("API", policy =>
                 {
                     policy.WithOrigins(Globals.Config.FrontUrl);
-                    policy.WithMethods("GET", "POST", "DELETE");
+                    policy.WithMethods("GET", "POST", "DELETE", "PUT");
                     policy.WithHeaders("content-type", "authorization");
                     policy.AllowCredentials();
                 });

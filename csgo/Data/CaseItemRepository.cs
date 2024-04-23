@@ -32,7 +32,7 @@ namespace csgo.Data {
         /// <inheritdoc />
         public async Task<List<CaseItem>> GetCaseItemsAsync(int caseId)
         {
-            return await context.CaseItems.Where(x => x.CaseId == caseId).ToListAsync();
+            return await context.CaseItems.Where(x => x.CaseId == caseId).Include(x => x.Item).ToListAsync();
         }
     }
 }

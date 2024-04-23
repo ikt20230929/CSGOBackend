@@ -419,7 +419,7 @@ namespace csgo.Services
 
             if (upgradeItems.Count == 0) return new ActionStatus { Status = "ERR", Message = "A tárgy nem fejleszthető tovább." };
 
-            return new ActionStatus { Status = "OK", Message = upgradeItems.Where(y => GetItemUpgradeSuccessChanceAsync(totalValue, y).Result > 0).Select(async x => new { Item = x.ToDto(), Chance = await GetItemUpgradeSuccessChanceAsync(totalValue, x), Multiplier = Math.Round((decimal)x.ItemValue! / totalValue, 2) }) };
+            return new ActionStatus { Status = "OK", Message = upgradeItems.Where(y => GetItemUpgradeSuccessChance(totalValue, y) > 0).Select(x => new { Item = x.ToDto(), Chance = GetItemUpgradeSuccessChance(totalValue, x), Multiplier = Math.Round((decimal)x.ItemValue! / totalValue, 2) }) };
         }
 
         /// <inheritdoc/>
@@ -786,9 +786,7 @@ namespace csgo.Services
 
             var totalValue = itemData.Sum(x => x.ItemValue);
 
-            var chance = await GetItemUpgradeSuccessChanceAsync(totalValue, nextItem);
-
-            if (GetRandomDouble() < chance)
+            if (GetRandomDouble() < GetItemUpgradeSuccessChance(totalValue, nextItem))
             {
                 foreach (var item in itemData)
                 {
@@ -1023,15 +1021,13 @@ namespace csgo.Services
             return new ActionStatus { Status = "OK", Message = items };
         }
 
-        private async Task<double> GetItemUpgradeSuccessChanceAsync(decimal currentValue, Item nextItem)
+        private double GetItemUpgradeSuccessChance(decimal currentValue, Item nextItem)
         {
-            var next = await itemRepository.GetItemByIdAsync(nextItem.ItemId);
-
             // Alap esély
             double baseChance = 0.8;
 
             // Érték szerinti esély
-            double valueMultiplier = 0.05 * Math.Abs((double)(next!.ItemValue - currentValue)!) / 10;
+            double valueMultiplier = 0.05 * Math.Abs((double)(nextItem.ItemValue - currentValue)!) / 10;
 
             double successChance = Math.Max(0, Math.Min(1, Math.Round(baseChance - valueMultiplier, 2)));
 

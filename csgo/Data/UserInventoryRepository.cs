@@ -37,7 +37,7 @@ namespace csgo.Data {
         /// <inheritdoc />
         public async Task<List<Userinventory>> GetUserInventoryAsync(int userId)
         {
-            return await context.Userinventories.Where(x => x.UserId == userId).ToListAsync();
+            return await context.Userinventories.Where(x => x.UserId == userId).Include(x => x.Item).ToListAsync();
         }
     }
 }
