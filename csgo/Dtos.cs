@@ -161,7 +161,7 @@ namespace csgo
             /// <summary>
             /// Részletek
             /// </summary>
-            [Required][JsonPropertyName("message")] public dynamic? Message { get; init; }
+            [Required][JsonPropertyName("message")] public dynamic Message { get; init; } = null!;
         }
 
         /// <summary>
@@ -207,7 +207,7 @@ namespace csgo
             /// <summary>
             /// A tárgy skinének neve
             /// </summary>
-            [Required][JsonPropertyName("itemSkinName")] public string ItemSkinName { get; init; } = null!;
+            [Required][JsonPropertyName("itemSkinName")] public string ItemSkinName { get; init; } = "";
 
             /// <summary>
             /// A tárgy értéke
@@ -436,7 +436,7 @@ namespace csgo
             /// <summary>
             /// A tárgy skinének neve
             /// </summary>
-            [Required][JsonPropertyName("itemSkinName")] public string ItemSkinName { get; init; } = null!;
+            [Required][JsonPropertyName("itemSkinName")] public string ItemSkinName { get; init; } = "";
 
             /// <summary>
             /// A tárgy értéke

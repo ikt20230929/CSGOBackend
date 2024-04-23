@@ -73,6 +73,8 @@ namespace csgo
             builder.Services.AddScoped<IUserInventoryRepository, UserInventoryRepository>();
             builder.Services.AddScoped<IUserRepository, UserRepository>();
             builder.Services.AddScoped<ICsgoBackendService, CSGOBackendService>();
+            builder.Services.AddScoped<ITotpProvider, TotpProvider>();
+            builder.Services.AddScoped<IDateTimeProvider, DateTimeProvider>();
             builder.Services.AddDbContext<CsgoContext>();
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
             {

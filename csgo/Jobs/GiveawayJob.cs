@@ -1,4 +1,5 @@
 ﻿using csgo.Models;
+using csgo.Services;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
 using Serilog;
@@ -9,8 +10,9 @@ namespace csgo.Jobs
     /// Nyereményjátékok kezeléséért felelős háttérfeladat.
     /// </summary>
     /// <param name="dbContext">Adatbázis kontextus</param>
+    /// <param name="dateTimeProvider">Dátum-idő szolgáltatás</param>
     [DisallowConcurrentExecution]
-    public class GiveawayJob(CsgoContext dbContext) : IJob
+    public class GiveawayJob(CsgoContext dbContext, IDateTimeProvider dateTimeProvider) : IJob
     {
         /// <summary>
         /// Elkezdi a nyereményjátékok figyelését, és a nyertesek kiválasztását.
@@ -19,7 +21,7 @@ namespace csgo.Jobs
         /// <returns></returns>
         public Task Execute(IJobExecutionContext context)
         {
-            var giveaways = dbContext.Giveaways.Where(g => g.GiveawayDate <= DateTime.Now && g.WinnerUserId == null).Include(x => x.Users).ToList();
+            var giveaways = dbContext.Giveaways.Where(g => g.GiveawayDate <= dateTimeProvider.Now && g.WinnerUserId == null).Include(x => x.Users).ToList();
             foreach (var giveaway in giveaways)
             {
                 Log.Information($"Executing giveaway: {giveaway.GiveawayName}");

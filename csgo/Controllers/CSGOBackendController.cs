@@ -51,7 +51,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ActionStatus>> Profile()
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             var response = await service.GetProfileAsync(user);
 
             return Ok(response);
@@ -69,7 +69,7 @@ namespace csgo.Controllers
             var jwtToken = tokenHandler.ReadJwtToken(token);
             jwtToken!.Payload.TryGetValue("name", out var username);
             var response = await service.GetUserAsync((string)username!);
-            return response.Message!;
+            return response.Message;
         }
 
         /// <summary>
@@ -87,7 +87,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<List<InventoryItemResponse>>> Inventory()
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             var response = await service.GetInventoryAsync(user);
 
             return Ok(response);
@@ -153,7 +153,7 @@ namespace csgo.Controllers
             {
                 case "OK":
                     {
-                        Response.Cookies.Append("refreshToken", loginRequest.Message!.Item2, new CookieOptions
+                        Response.Cookies.Append("refreshToken", loginRequest.Message.Item2, new CookieOptions
                         {
                             HttpOnly = true,
                             SameSite = SameSiteMode.None,
@@ -161,14 +161,14 @@ namespace csgo.Controllers
                             Secure = true
                         });
 
-                        return Ok(new ActionStatus { Status = "OK", Message = loginRequest.Message!.Item1 });
+                        return Ok(new ActionStatus { Status = "OK", Message = loginRequest.Message.Item1 });
                     }
 
                 case "UI":
                     {
                         if (login.Mfa != null && login.Mfa.MfaType == MfaType.WebAuthnOptions)
                         {
-                            HttpContext.Session.SetString("fido2.attestationOptions", (string)loginRequest.Message!);
+                            HttpContext.Session.SetString("fido2.attestationOptions", (string)loginRequest.Message);
                         }
 
                         return Unauthorized(loginRequest);
@@ -200,7 +200,7 @@ namespace csgo.Controllers
         [Produces("application/json")]
         public async Task<ActionResult> WebAuthnAttestation(WebauthnAttestationRequest request)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
 
             switch (request.Mode)
             {
@@ -209,7 +209,7 @@ namespace csgo.Controllers
                         var options = await service.WebAuthnAttestationAsync(user, request);
                         if (options.Status == "OK")
                         {
-                            HttpContext.Session.SetString("fido2.attestationOptions", (string)options.Message!);
+                            HttpContext.Session.SetString("fido2.attestationOptions", (string)options.Message);
                             return Ok(options);
                         }
                         else
@@ -254,7 +254,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ActionStatus>> DisableWebAuthn(WebauthnDisableRequest request)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
 
             switch (request.Mode)
             {
@@ -263,7 +263,7 @@ namespace csgo.Controllers
                         var options = await service.DisableWebauthnAsync(user, request);
                         if (options.Status == "OK")
                         {
-                            HttpContext.Session.SetString("fido2.attestationOptions", (string)options.Message!);
+                            HttpContext.Session.SetString("fido2.attestationOptions", (string)options.Message);
                             return Ok(options);
                         }
                         else
@@ -306,7 +306,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ActionStatus>> GenerateTotpToken()
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             var response = await service.GenerateTotpTokenAsync(user);
 
             return response.Status == "OK" ? Ok(response) : Conflict(response);
@@ -329,7 +329,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ActionStatus>> CheckTotpToken(EnableTOTPRequest request)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             var response = await service.CheckTotpTokenAsync(user, request);
 
             return response.Status == "OK" ? Ok(response) : BadRequest(response);
@@ -352,7 +352,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ActionStatus>> DisableTotp(DisableTOTPRequest request)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             var response = await service.DisableTotpAsync(user, request);
 
             return response.Status == "OK" ? Ok(response) : BadRequest(response);
@@ -394,7 +394,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ItemResponse>> OpenCase(int caseId)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             var response = await service.OpenCaseAsync(user, caseId);
 
             return response.Status == "OK" ? Ok(response) : BadRequest(response);
@@ -435,7 +435,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ActionStatus>> SellItem(int inventoryId)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             var response = await service.SellItemAsync(user, inventoryId);
 
             return response.Status == "OK" ? Ok(response) : NotFound(response);
@@ -459,7 +459,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ActionStatus>> WithdrawItems(ItemWithdrawRequest request)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             var response = await service.WithdrawItemsAsync(user, request);
 
             return response.Status == "OK" ? Ok(response) : NotFound(response);
@@ -483,7 +483,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult> Deposit(DepositRequest deposit)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             var response = await service.DepositAsync(user, deposit.Amount);
 
             return response.Status == "OK" ? Ok(response) : BadRequest(response);
@@ -506,7 +506,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ActionStatus>> GetUpgradeItems(ItemUpgradeListRequest request)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
 
             var response = await service.GetUpgradeItemsAsync(user, request);
 
@@ -529,7 +529,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ItemUpgradeResponse>> UpgradeItem(ItemUpgradeRequest request)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             var response = await service.UpgradeItemAsync(user, request);
 
             return response.Status == "OK" ? Ok(response) : NotFound(response);
@@ -552,7 +552,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult> ClaimDailyReward()
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             var response = await service.ClaimDailyRewardAsync(user);
 
             return response.Status == "OK" ? Ok(response) : Conflict(response);
@@ -576,7 +576,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult> JoinGiveaway(int id)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             var response = await service.JoinGiveawayAsync(user, id);
 
             return response.Status == "OK" ? Ok(response) : BadRequest(response);
@@ -597,7 +597,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ActionStatus>> GetGiveaways()
         {
-            var user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            var user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
 
             return await service.GetGiveawaysAsync(user);
         }
@@ -638,7 +638,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult> AddCase(CaseRecord details)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var @case = await service.AddCaseAsync(details);
@@ -664,7 +664,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult> DeleteCase(int caseId)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.DeleteCaseAsync(caseId);
@@ -692,7 +692,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult> UpdateCase(int caseId, CaseRecord details)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.UpdateCaseAsync(caseId, details);
@@ -721,7 +721,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult> AddCaseItem(int caseId, int itemId)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.AddCaseItemAsync(caseId, itemId);
@@ -749,7 +749,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult> DeleteCaseItem(int caseId, int itemId)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.DeleteCaseItemAsync(caseId, itemId);
@@ -776,7 +776,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<CurrentGiveawayResponse>> AddGiveaway(GiveawayRecord details)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.AddGiveawayAsync(details);
@@ -803,7 +803,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult> DeleteGiveaway(int giveawayId)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.DeleteGiveawayAsync(giveawayId);
@@ -831,7 +831,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ActionStatus>> UpdateGiveaway(int giveawayId, GiveawayRecord details)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.UpdateGiveawayAsync(giveawayId, details);
@@ -857,7 +857,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ItemResponse>> AddItem(ItemRecord details)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.AddItemAsync(details);
@@ -883,7 +883,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult> DeleteItem(int itemId)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.DeleteItemAsync(itemId);
@@ -907,7 +907,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ActionStatus>> GetUsers()
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             return await service.GetUsersAsync();
@@ -934,7 +934,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult<ActionStatus>> UpdateUser(int userId, UserEditRecord details)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.UpdateUserAsync(userId, details);
@@ -962,7 +962,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult> AddInventoryItem(int userId, int itemId)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.AddInventoryItemAsync(userId, itemId);
@@ -990,7 +990,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult> DeleteInventoryItem(int userId, int itemId)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.DeleteInventoryItemAsync(userId, itemId);
@@ -1018,7 +1018,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<ActionResult> UpdateItem(int itemId, ItemRecord details)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.UpdateItemAsync(itemId, details);
@@ -1044,7 +1044,7 @@ namespace csgo.Controllers
         [Authorize]
         public async Task<IActionResult> ImageUpload(IFormFile image)
         {
-            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message!;
+            User user = (await service.GetUserAsync(User.Identity!.Name!)).Message;
             if (!user.IsAdmin) return new ObjectResult(new ActionStatus { Status = "ERR", Message = "Nincs jogosultsága a művelethez." }) { StatusCode = StatusCodes.Status403Forbidden };
 
             var response = await service.UploadImageAsync(image);

@@ -1,4 +1,5 @@
 using csgo.Models;
+using csgo.Services;
 using Microsoft.EntityFrameworkCore;
 
 namespace csgo.Data {
@@ -6,7 +7,8 @@ namespace csgo.Data {
     /// Repository réteg a nyereményjátékok kezeléséhez
     /// </summary>
     /// <param name="context">Adatbázis kontextus</param>
-    public class GiveawayRepository(CsgoContext context) : IGiveawayRepository
+    /// <param name="dateTimeProvider">Dátum-idő szolgáltatás</param>
+    public class GiveawayRepository(CsgoContext context, IDateTimeProvider dateTimeProvider) : IGiveawayRepository
     {
         /// <inheritdoc />
         public async Task AddAsync(Giveaway giveaway)
@@ -31,7 +33,7 @@ namespace csgo.Data {
         /// <inheritdoc />
         public async Task<List<Giveaway>> GetCurrentGiveawaysAsync()
         {
-            return await context.Giveaways.Where(x => x.GiveawayDate > DateTime.Now)
+            return await context.Giveaways.Where(x => x.GiveawayDate > dateTimeProvider.Now)
                                           .Include(x => x.Item)
                                           .Include(x => x.Users)
                                           .ToListAsync();
@@ -46,7 +48,7 @@ namespace csgo.Data {
         /// <inheritdoc />
         public async Task<List<Giveaway>> GetPastGiveawaysAsync()
         {
-            return await context.Giveaways.Where(x => x.GiveawayDate <= DateTime.Now && x.WinnerUserId != null)
+            return await context.Giveaways.Where(x => x.GiveawayDate <= dateTimeProvider.Now && x.WinnerUserId != null)
                                           .Include(x => x.Item)
                                           .Include(giveaway => giveaway.WinnerUser)
                                           .ToListAsync();

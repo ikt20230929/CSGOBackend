@@ -20,8 +20,8 @@ namespace csgo
               ItemDescription = item.ItemDescription,
               ItemId = item.ItemId,
               ItemRarity = item.ItemRarity,
-              ItemSkinName = item.ItemSkinName!,
-              ItemValue = (decimal)item.ItemValue!,
+              ItemSkinName = item.ItemSkinName ?? "Tárgy skin nevének lekérdezése sikertelen volt",
+              ItemValue = item.ItemValue ?? -1,
               ItemAssetUrl = item.ItemAssetUrl,
               ItemType = item.ItemType
           };
@@ -38,8 +38,8 @@ namespace csgo
                 ItemDescription = item.ItemDescription,
                 ItemId = item.ItemId,
                 ItemRarity = item.ItemRarity,
-                ItemSkinName = item.ItemSkinName!,
-                ItemValue = (decimal)item.ItemValue!,
+                ItemSkinName = item.ItemSkinName ?? "Tárgy skin nevének lekérdezése sikertelen volt",
+                ItemValue = item.ItemValue ?? -1,
                 ItemAssetUrl = item.ItemAssetUrl,
                 ItemType = item.ItemType
             };
@@ -58,7 +58,7 @@ namespace csgo
                 ItemName = @case.ItemName,
                 Items = items,
                 ItemAssetUrl = @case.ItemAssetUrl,
-                ItemValue = (decimal)@case.ItemValue!
+                ItemValue = @case.ItemValue ?? -1
             };
         }
 

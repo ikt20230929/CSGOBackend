@@ -21,6 +21,8 @@ namespace csgo.Services
     /// <param name="itemRepository">A tárgyakat kezelő repository</param>
     /// <param name="userInventoryRepository">A felhasználó leltárát kezelő repository</param>
     /// <param name="userRepository">A felhasználókat kezelő repository</param>
+    /// <param name="dateTimeProvider">Dátum-idő szolgáltatás</param>
+    /// <param name="totpProvider">A TOTP szolgáltatás</param>
     /// <param name="fido2">A Fido2 szolgáltatás</param>
     public class CSGOBackendService(
     ICaseItemRepository caseItemRepository,
@@ -28,6 +30,8 @@ namespace csgo.Services
     IItemRepository itemRepository,
     IUserInventoryRepository userInventoryRepository,
     IUserRepository userRepository,
+    IDateTimeProvider dateTimeProvider,
+    ITotpProvider totpProvider,
     IFido2 fido2) : ICsgoBackendService
     {
         private readonly Dictionary<ItemRarity, int> rarityWeights = new()
@@ -96,7 +100,7 @@ namespace csgo.Services
                     GiveawayDate = giveaway.GiveawayDate,
                     GiveawayDescription = giveaway.GiveawayDescription,
                     GiveawayId = giveaway.GiveawayId,
-                    GiveawayItem = giveaway.Item!.ItemName,
+                    GiveawayItem = giveaway.Item?.ItemName ?? "Név lekérése sikertelen volt.",
                     GiveawayName = giveaway.GiveawayName
                 }
             };
@@ -144,8 +148,7 @@ namespace csgo.Services
         {
             if (user.TotpEnabled) return new ActionStatus { Status = "ERR", Message = "A kétlépcsős azonosítás már engedélyezve van." };
 
-            var totp = new Totp(Base32Encoding.ToBytes(user.TotpSecret));
-            bool verify = totp.VerifyTotp(request.Code, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
+            bool verify = totpProvider.VerifyTotp(Base32Encoding.ToBytes(user.TotpSecret), request.Code);
 
             if (verify)
             {
@@ -162,14 +165,14 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> ClaimDailyRewardAsync(User user)
         {
-            if (user.LastClaimDate.Date == DateTime.Now.Date) return new ActionStatus { Status = "ERR", Message = "A napi jutalom már igényelve lett." };
+            if (user.LastClaimDate.Date == dateTimeProvider.Now.Date) return new ActionStatus { Status = "ERR", Message = "A napi jutalom már igényelve lett." };
 
             // Ha az utolsó kérés dátuma nem az aktuális hónapban van, akkor a streaket nullázni kell.
-            if (user.LastClaimDate.Month != DateTime.Now.Month) user.LoginStreak = 1;
+            if (user.LastClaimDate.Month != dateTimeProvider.Now.Month) user.LoginStreak = 1;
 
             int reward = 5;
 
-            if (user.LastClaimDate.Date.AddDays(1) == DateTime.Now.Date)
+            if (user.LastClaimDate.Date.AddDays(1) == dateTimeProvider.Now.Date)
             {
                 user.LoginStreak++;
                 if (user.LoginStreak == 3) reward *= 2;
@@ -182,7 +185,7 @@ namespace csgo.Services
                 user.LoginStreak = 1;
             }
 
-            user.LastClaimDate = DateTime.Now;
+            user.LastClaimDate = dateTimeProvider.Now;
             user.Balance += reward;
 
             await userRepository.UpdateAsync(user);
@@ -304,8 +307,7 @@ namespace csgo.Services
 
             if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash)) return new ActionStatus { Status = "ERR", Message = "Érvénytelen jelszó." };
 
-            var totp = new Totp(Base32Encoding.ToBytes(user.TotpSecret));
-            bool verify = totp.VerifyTotp(request.Code, out _, VerificationWindow.RfcSpecifiedNetworkDelay);
+            bool verify = totpProvider.VerifyTotp(Base32Encoding.ToBytes(user.TotpSecret), request.Code);
 
             if (verify)
             {
@@ -356,11 +358,11 @@ namespace csgo.Services
             {
                 GiveawayId = giveaway.GiveawayId,
                 GiveawayName = giveaway.GiveawayName,
-                GiveawayDescription = giveaway.GiveawayDescription!,
+                GiveawayDescription = giveaway.GiveawayDescription ?? "Leírás lekérése sikertelen volt.",
                 GiveawayDate = giveaway.GiveawayDate,
-                GiveawayItem = giveaway.Item!.ItemName,
-                GiveawayItemAssetUrl = giveaway.Item!.ItemAssetUrl,
-                GiveawayItemSkinName = giveaway.Item!.ItemSkinName,
+                GiveawayItem = giveaway.Item?.ItemName ?? "Név lekérése sikertelen volt.",
+                GiveawayItemAssetUrl = giveaway.Item?.ItemAssetUrl ?? "error.png",
+                GiveawayItemSkinName = giveaway.Item?.ItemSkinName ?? "Skin név lekérése sikertelen volt.",
                 GiveawayJoined = giveaway.Users.Contains(user)
             }).ToList();
 
@@ -454,7 +456,7 @@ namespace csgo.Services
             var giveaway = await giveawayRepository.GetByIdAsync(id);
 
             if (giveaway == null) return new ActionStatus { Status = "ERR", Message = "A megadott nyereményjáték nem található." };
-            if (giveaway.GiveawayDate < DateTime.Now) return new ActionStatus { Status = "ERR", Message = "A nyereményjáték már lezárult." };
+            if (giveaway.GiveawayDate < dateTimeProvider.Now) return new ActionStatus { Status = "ERR", Message = "A nyereményjáték már lezárult." };
             if (giveaway.Users.Contains(user)) return new ActionStatus { Status = "ERR", Message = "Már csatlakoztál a nyereményjátékhoz." };
 
             giveaway.Users.Add(user);
@@ -469,7 +471,7 @@ namespace csgo.Services
             var request = await GetUserAsync(login.Username);
             if (request.Status == "ERR") return request;
 
-            User storedUser = request.Message!;
+            User storedUser = request.Message;
 
             string? twoFactorScenario = null;
 
@@ -495,9 +497,9 @@ namespace csgo.Services
                     {
                         if (!storedUser.TotpEnabled) return new ActionStatus { Status = "ERR", Message = "Helytelen hitelesítési mód." };
                         if (login.Mfa.TotpToken == null) return new ActionStatus { Status = "ERR", Message = "Helytelen kód." };
-                        var totp = new Totp(Base32Encoding.ToBytes(storedUser.TotpSecret));
-                        bool verify = totp.VerifyTotp(login.Mfa.TotpToken, out _,
-                            VerificationWindow.RfcSpecifiedNetworkDelay);
+
+                        bool verify = totpProvider.VerifyTotp(Base32Encoding.ToBytes(storedUser.TotpSecret), login.Mfa.TotpToken);
+
                         return verify ? CheckPassword(login.Password, storedUser) : new ActionStatus { Status = "ERR", Message = "Helytelen kód." };
                     }
                 case MfaType.WebAuthnOptions:
@@ -582,7 +584,7 @@ namespace csgo.Services
                 issuer: Globals.Config.BackUrl,
                 audience: Globals.Config.BackUrl,
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(30),
+                expires: dateTimeProvider.Now.AddMinutes(30),
                 signingCredentials: Signing.AccessTokenCreds);
             var accessTokenString = new JwtSecurityTokenHandler().WriteToken(accessToken);
 
@@ -591,7 +593,7 @@ namespace csgo.Services
                 issuer: Globals.Config.BackUrl,
                 audience: Globals.Config.BackUrl,
                 claims: claims,
-                expires: DateTime.Now.AddDays(7),
+                expires: dateTimeProvider.Now.AddDays(7),
                 signingCredentials: Signing.RefreshTokenCreds);
             var refreshTokenString = new JwtSecurityTokenHandler().WriteToken(refreshToken);
 
@@ -705,8 +707,8 @@ namespace csgo.Services
         {
             var giveaway = await giveawayRepository.GetByIdAsync(giveawayId);
             if (giveaway == null) return new ActionStatus { Status = "ERR", Message = "A megadott nyereményjáték nem található." };
-            if (giveaway.GiveawayDate < DateTime.Now) return new ActionStatus { Status = "ERR", Message = "Lefutott nyereményjátékot nem lehet módosítani." };
-            if (details.Date < DateTime.Now) return new ActionStatus { Status = "ERR", Message = "A nyereményjáték dátuma nem lehet a múltban." };
+            if (giveaway.GiveawayDate < dateTimeProvider.Now) return new ActionStatus { Status = "ERR", Message = "Lefutott nyereményjátékot nem lehet módosítani." };
+            if (details.Date < dateTimeProvider.Now) return new ActionStatus { Status = "ERR", Message = "A nyereményjáték dátuma nem lehet a múltban." };
 
             var item = await itemRepository.GetItemByIdAsync(details.ItemId);
             if (item == null) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található." };
@@ -726,7 +728,7 @@ namespace csgo.Services
                     GiveawayDate = giveaway.GiveawayDate,
                     GiveawayDescription = giveaway.GiveawayDescription,
                     GiveawayId = giveaway.GiveawayId,
-                    GiveawayItem = giveaway.Item!.ItemName,
+                    GiveawayItem = giveaway.Item?.ItemName ?? "Név lekérése sikertelen volt.",
                     GiveawayName = giveaway.GiveawayName
                 }
             };
@@ -921,7 +923,7 @@ namespace csgo.Services
                                 PublicKey = fidoCredentials.Result.PublicKey,
                                 UserHandle = fidoCredentials.Result.User.Id,
                                 SignCount = fidoCredentials.Result.SignCount,
-                                RegDate = DateTime.Now,
+                                RegDate = dateTimeProvider.Now,
                                 AaGuid = fidoCredentials.Result.AaGuid
                             };
 
