@@ -124,11 +124,11 @@ namespace csgo.Services
         public Task<ActionStatus> DepositAsync(User user, double amount);
         
         /// <summary>
-        /// Visszaad egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgy(akat).
+        /// Visszaad egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgy(ak)at.
         /// </summary>
         /// <param name="user">A kérelmet küldő felhasználó.</param>
         /// <param name="request">A tárgy(ak) leltárazonosítójai, és a szorzó.</param>
-        /// <returns>Egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgyat.</returns>
+        /// <returns>Egy listát, ami azt tartalmazza hogy melyik tárgyakra lehet továbbfejleszteni a megadott tárgy(ak)at.</returns>
         public Task<ActionStatus> GetUpgradeItemsAsync(User user, ItemUpgradeListRequest request);
        
         /// <summary>

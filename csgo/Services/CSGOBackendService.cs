@@ -3,11 +3,11 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using csgo.Data;
 using csgo.Models;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
 using KaimiraGames;
-using Microsoft.EntityFrameworkCore;
 using OtpNet;
 using static csgo.Dtos;
 
@@ -16,9 +16,19 @@ namespace csgo.Services
     /// <summary>
     /// Backend szolgáltatás
     /// </summary>
-    /// <param name="context">Az adatbázis kontextus</param>
+    /// <param name="caseItemRepository">A láda-tárgy kapcsolatot kezelő repository</param>
+    /// <param name="giveawayRepository">A nyereményjátékokat kezelő repository</param>
+    /// <param name="itemRepository">A tárgyakat kezelő repository</param>
+    /// <param name="userInventoryRepository">A felhasználó leltárát kezelő repository</param>
+    /// <param name="userRepository">A felhasználókat kezelő repository</param>
     /// <param name="fido2">A Fido2 szolgáltatás</param>
-    public class CSGOBackendService(CsgoContext context, IFido2 fido2) : ICsgoBackendService
+    public class CSGOBackendService(
+    ICaseItemRepository caseItemRepository,
+    IGiveawayRepository giveawayRepository, 
+    IItemRepository itemRepository,
+    IUserInventoryRepository userInventoryRepository,
+    IUserRepository userRepository,
+    IFido2 fido2) : ICsgoBackendService
     {
         private readonly Dictionary<ItemRarity, int> rarityWeights = new()
         {
@@ -41,8 +51,7 @@ namespace csgo.Services
                 ItemAssetUrl = details.AssetUrl ?? null
             };
 
-            await context.Items.AddAsync(@case);
-            await context.SaveChangesAsync();
+            await itemRepository.AddAsync(@case);
 
             return new ActionStatus { Status = "OK", Message = @case.ToCaseDto([]) };
         }
@@ -50,28 +59,23 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> AddCaseItemAsync(int caseId, int itemId)
         {
-            var @case = await context.Items.FirstOrDefaultAsync(x => x.ItemType == ItemType.Case && x.ItemId == caseId);
-            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemType == ItemType.Item && x.ItemId == itemId);
+            var @case = await itemRepository.GetCaseByIdAsync(caseId);
+            var item = await itemRepository.GetItemByIdAsync(itemId);
 
             if (@case == null) return new ActionStatus { Status = "ERR", Message = "A megadott láda nem található." };
             if (item == null) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található." };
 
-            await context.CaseItems.AddAsync(new CaseItem
-            {
-                CaseId = @case.ItemId,
-                ItemId = item.ItemId
-            });
-            await context.SaveChangesAsync();
+            await caseItemRepository.AddAsync(new CaseItem { CaseId = caseId, ItemId = itemId });
 
-            var caseItems = await context.CaseItems.Where(x => x.Case == @case).Select(x => x.Item.ToDto()).ToListAsync();
+            var caseItems = await caseItemRepository.GetCaseItemsAsync(caseId);
 
-            return new ActionStatus { Status = "OK", Message = @case.ToCaseDto(caseItems) };
+            return new ActionStatus { Status = "OK", Message = @case.ToCaseDto(caseItems.Select(x => x.Item.ToDto()).ToList()) };
         }
 
         /// <inheritdoc/>
         public async Task<ActionStatus> AddGiveawayAsync(GiveawayRecord details)
         {
-            var item = await context.Items.FindAsync(details.ItemId);
+            var item = await itemRepository.GetItemByIdAsync(details.ItemId);
             if (item == null) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található." };
 
             var giveaway = new Giveaway
@@ -82,8 +86,7 @@ namespace csgo.Services
                 GiveawayName = details.Name,
             };
 
-            await context.Giveaways.AddAsync(giveaway);
-            await context.SaveChangesAsync();
+            await giveawayRepository.AddAsync(giveaway);
 
             return new ActionStatus
             {
@@ -102,22 +105,16 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> AddInventoryItemAsync(int userId, int itemId)
         {
-            var target = await context.Users.FirstOrDefaultAsync(x => x.UserId == userId);
-            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId && x.ItemType == ItemType.Item);
+            var target = await userRepository.GetByIdAsync(userId);
+            var item = await itemRepository.GetItemByIdAsync(itemId);
 
             if (target == null) return new ActionStatus { Status = "ERR", Message = "A megadott felhasználó nem található." };
             if (item == null) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található." };
 
-            await context.Userinventories.AddAsync(new Userinventory
-            {
-                UserId = target.UserId,
-                ItemId = item.ItemId
-            });
-            await context.SaveChangesAsync();
+            await userInventoryRepository.AddAsync(new Userinventory { ItemId = itemId, UserId = userId });
 
-            List<InventoryItemResponse> items = await context.Userinventories.Where(x => x.UserId == target.UserId)
-                .Select(x => x.Item.ToInventoryItemDto(x.InventoryId))
-                .ToListAsync();
+            var userInventoryItems = await userInventoryRepository.GetUserInventoryAsync(userId);
+            List<InventoryItemResponse> items = userInventoryItems.Select(x => x.Item.ToInventoryItemDto(x.InventoryId)).ToList();
 
             return new ActionStatus { Status = "OK", Message = items };
 
@@ -137,8 +134,7 @@ namespace csgo.Services
                 ItemAssetUrl = details.AssetUrl ?? null
             };
 
-            await context.Items.AddAsync(item);
-            await context.SaveChangesAsync();
+            await itemRepository.AddAsync(item);
 
             return new ActionStatus { Status = "OK", Message = item.ToDto() };
         }
@@ -154,7 +150,7 @@ namespace csgo.Services
             if (verify)
             {
                 user.TotpEnabled = true;
-                await context.SaveChangesAsync();
+                await userRepository.UpdateAsync(user);
                 return new ActionStatus { Status = "OK", Message = "A kétlépcsős azonosítás sikeresen engedélyezve lett." };
             }
             else
@@ -189,7 +185,7 @@ namespace csgo.Services
             user.LastClaimDate = DateTime.Now;
             user.Balance += reward;
 
-            await context.SaveChangesAsync();
+            await userRepository.UpdateAsync(user);
 
             return new ActionStatus { Status = "OK", Message = reward };
         }
@@ -197,19 +193,18 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> DeleteCaseAsync(int caseId)
         {
-            var @case = await context.Items.FirstOrDefaultAsync(x => x.ItemId == caseId && x.ItemType == ItemType.Case);
+            var @case = await itemRepository.GetCaseByIdAsync(caseId);
 
             if (@case == null) return new ActionStatus { Status = "ERR", Message = "A megadott láda nem található." };
 
-            var inventoryItems = await context.Userinventories.Where(x => x.ItemId == @case.ItemId).ToListAsync();
+            var inventoryItems = await userInventoryRepository.GetInventoryItemsByItemIdAsync(caseId);
 
             foreach (var item in inventoryItems)
             {
-                context.Userinventories.Remove(item);
+                await userInventoryRepository.DeleteAsync(item);
             }
 
-            context.Items.Remove(@case);
-            await context.SaveChangesAsync();
+            await itemRepository.DeleteAsync(@case);
 
             return new ActionStatus { Status = "OK", Message = "A láda sikeresen törölve lett." };
         }
@@ -217,40 +212,38 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> DeleteCaseItemAsync(int caseId, int itemId)
         {
-            var @case = await context.Items.FindAsync(caseId);
-            var item = await context.Items.FindAsync(itemId);
+            var @case = await itemRepository.GetCaseByIdAsync(caseId);
+            var item = await itemRepository.GetItemByIdAsync(itemId);
 
             if (@case == null) return new ActionStatus { Status = "ERR", Message = "A megadott láda nem található." };
             if (item == null) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található." };
 
-            var caseItem = await context.CaseItems.FindAsync(caseId, itemId);
+            var caseItem = await caseItemRepository.GetCaseItemByIdAsync(caseId, itemId);
             if (caseItem == null) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található a ládában." };
 
-            context.CaseItems.Remove(caseItem);
-            await context.SaveChangesAsync();
+            await caseItemRepository.DeleteAsync(caseItem);
 
-            var caseItems = await context.CaseItems.Where(x => x.Case == @case).Select(x => x.Item.ToDto()).ToListAsync();
+            var caseItems = await caseItemRepository.GetCaseItemsAsync(caseId);
 
-            return new ActionStatus { Status = "OK", Message = @case.ToCaseDto(caseItems) };
+            return new ActionStatus { Status = "OK", Message = @case.ToCaseDto(caseItems.Select(x => x.Item.ToDto()).ToList()) };
         }
 
         /// <inheritdoc/>
         public async Task<ActionStatus> DeleteGiveawayAsync(int giveawayId)
         {
-            var giveaway = await context.Giveaways.FindAsync(giveawayId);
+            var giveaway = await giveawayRepository.GetByIdAsync(giveawayId);
 
             if (giveaway == null) return new ActionStatus { Status = "ERR", Message = "A megadott nyereményjáték nem található." };
 
-            var participants = await context.Users.Include(x => x.Giveaways).Where(x => x.Giveaways.Contains(giveaway)).ToListAsync();
+            var participants = await giveawayRepository.GetParticipantsAsync(giveaway);
 
-            foreach (var item in participants)
+            foreach (var participant in participants)
             {
-                item.Giveaways.Remove(giveaway);
+                participant.Giveaways.Remove(giveaway);
+                await userRepository.UpdateAsync(participant);
             }
 
-            context.Giveaways.Remove(giveaway);
-
-            await context.SaveChangesAsync();
+            await giveawayRepository.DeleteAsync(giveaway);
 
             return new ActionStatus { Status = "OK", Message = "A nyereményjáték sikeresen törölve lett." };
         }
@@ -258,18 +251,18 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> DeleteInventoryItemAsync(int userId, int itemId)
         {
-            var target = await context.Users.FirstOrDefaultAsync(x => x.UserId == userId);
-            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId && x.ItemType == ItemType.Item);
+            var target = await userRepository.GetByIdAsync(userId);
+            var item = await itemRepository.GetItemByIdAsync(itemId);
             if (target == null) return new ActionStatus { Status = "ERR", Message = "A megadott felhasználó nem található." };
             if (item == null) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található." };
 
-            var userInventory = await context.Userinventories.FirstOrDefaultAsync(x => x.UserId == target.UserId && x.ItemId == item.ItemId);
+            var userInventoryItems = await userInventoryRepository.GetUserInventoryAsync(userId);
+            var userInventory = userInventoryItems.FirstOrDefault(x => x.ItemId == itemId);
             if (userInventory == null) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található a felhasználó leltárában." };
 
-            context.Userinventories.Remove(userInventory);
-            await context.SaveChangesAsync();
+            await userInventoryRepository.DeleteAsync(userInventory);
 
-            List<InventoryItemResponse> items = await context.Userinventories.Where(x => x.UserId == target.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId)).ToListAsync();
+            List<InventoryItemResponse> items = userInventoryItems.Where(x => x.InventoryId != userInventory.InventoryId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId)).ToList();
 
             return new ActionStatus { Status = "OK", Message = items };
         }
@@ -277,19 +270,18 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> DeleteItemAsync(int itemId)
         {
-            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId && x.ItemType == ItemType.Item);
+            var item = await itemRepository.GetItemByIdAsync(itemId);
 
             if (item == null) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található." };
 
-            var inventories = await context.Userinventories.Where(x => x.ItemId == itemId).ToListAsync();
+            var inventories = await userInventoryRepository.GetInventoryItemsByItemIdAsync(itemId);
 
             foreach (var inventoryItem in inventories)
             {
-                context.Userinventories.Remove(inventoryItem);
+                await userInventoryRepository.DeleteAsync(inventoryItem);
             }
 
-            context.Items.Remove(item);
-            await context.SaveChangesAsync();
+            await itemRepository.DeleteAsync(item);
 
             return new ActionStatus { Status = "OK", Message = "A tárgy sikeresen törölve lett." };
         }
@@ -300,7 +292,7 @@ namespace csgo.Services
             if (amount <= 0) return new ActionStatus { Status = "ERR", Message = "Az összeg nem lehet negatív." };
 
             user.Balance += amount;
-            await context.SaveChangesAsync();
+            await userRepository.UpdateAsync(user);
 
             return new ActionStatus { Status = "OK", Message = $"Sikeresen befizetve: ${amount}." };
         }
@@ -318,7 +310,7 @@ namespace csgo.Services
             if (verify)
             {
                 user.TotpEnabled = false;
-                await context.SaveChangesAsync();
+                await userRepository.UpdateAsync(user);
                 return new ActionStatus { Status = "OK", Message = "A kétlépcsős azonosítás sikeresen ki lett kapcsolva." };
             }
             else
@@ -333,7 +325,7 @@ namespace csgo.Services
             if (user.TotpEnabled) return new ActionStatus { Status = "ERR", Message = "A kétlépcsős azonosítás már engedélyezve van." };
 
             user.TotpSecret = Base32Encoding.ToString(KeyGeneration.GenerateRandomKey(20));
-            await context.SaveChangesAsync();
+            await userRepository.UpdateAsync(user);
 
             return new ActionStatus { Status = "OK", Message = user.TotpSecret };
         }
@@ -341,21 +333,14 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> GetCasesAsync()
         {
-            var items = await context.Items
-                .Where(x => x.ItemType == ItemType.Case)
-                .ToListAsync();
+            var items = await itemRepository.GetAllCasesAsync();
 
             var caseDtos = new List<CaseResponse>();
 
             foreach (var item in items)
             {
-                var caseItems = await context.CaseItems
-                    .Where(y => y.CaseId == item.ItemId)
-                    .Select(z => z.Item)
-                    .Select(z => z.ToDto())
-                    .ToListAsync();
-
-                var caseDto = item.ToCaseDto(caseItems);
+                var caseItems = await caseItemRepository.GetCaseItemsAsync(item.ItemId);
+                var caseDto = item.ToCaseDto(caseItems.Select(x => x.Item.ToDto()).ToList());
                 caseDtos.Add(caseDto);
             }
 
@@ -365,7 +350,7 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> GetGiveawaysAsync(User user)
         {
-            var giveaways = await context.Giveaways.Where(x => x.GiveawayDate > DateTime.Now).Include(x => x.Item).Include(x => x.Users).ToListAsync();
+            var giveaways = await giveawayRepository.GetCurrentGiveawaysAsync();
 
             var mapped = giveaways.Select(giveaway => new CurrentGiveawayResponse
             {
@@ -385,7 +370,7 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> GetInventoryAsync(User user)
         {
-            List<InventoryItemResponse> items = await context.Userinventories.Where(x => x.UserId == user.UserId).Select(x => x.Item.ToInventoryItemDto(x.InventoryId)).ToListAsync();
+            List<InventoryItemResponse> items = (await userInventoryRepository.GetUserInventoryAsync(user.UserId)).Select(x => x.Item.ToInventoryItemDto(x.InventoryId)).ToList();
 
             return new ActionStatus { Status = "OK", Message = items };
         }
@@ -393,9 +378,7 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> GetPastGiveawaysAsync()
         {
-            var giveaways = await context.Giveaways
-                .Where(x => x.GiveawayDate <= DateTime.Now && x.WinnerUserId != null)
-                .Include(x => x.Item).Include(giveaway => giveaway.WinnerUser).ToListAsync();
+            var giveaways = await giveawayRepository.GetPastGiveawaysAsync();
 
             var mapped = giveaways.Select(giveaway => new PastGiveawayResponse
             {
@@ -421,34 +404,30 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> GetUpgradeItemsAsync(User user, ItemUpgradeListRequest request)
         {
+            var userItems = await userInventoryRepository.GetUserInventoryAsync(user.UserId);
+
             foreach (var item in request.Items)
             {
-                if (!await context.Userinventories.AnyAsync(x => x.InventoryId == item && x.UserId == user.UserId)) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található a leltárban." };
+                if (!userItems.Any(x => x.InventoryId == item)) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található a leltárban." };
             }
 
-            List<InventoryItemResponse> itemData = request.Items.Select(x => context.Userinventories.Include(y => y.Item).First(y => y.InventoryId == x).Item.ToInventoryItemDto(x)).ToList();
+            List<InventoryItemResponse> itemData = userItems.Where(x => request.Items.Contains(x.InventoryId)).Select(x => x.Item.ToInventoryItemDto(x.InventoryId)).ToList();
 
             var totalValue = itemData.Sum(x => x.ItemValue);
 
-            var upgradeItems = await context.Items
-                .Where(x => x.ItemValue >= totalValue && x.ItemType == ItemType.Item)
-                .OrderBy(x => x.ItemValue)
-                .ToListAsync();
+            var upgradeItems = await itemRepository.GetUpgradeItemsAsync(totalValue);
 
             if (upgradeItems.Count == 0) return new ActionStatus { Status = "ERR", Message = "A tárgy nem fejleszthető tovább." };
 
-            return new ActionStatus { Status = "OK", Message = upgradeItems.Where(y => GetItemUpgradeSuccessChance(totalValue, y) > 0).Select(x => new { Item = x.ToDto(), Chance = GetItemUpgradeSuccessChance(totalValue, x), Multiplier = Math.Round((decimal)x.ItemValue! / totalValue, 2) }) };
+            return new ActionStatus { Status = "OK", Message = upgradeItems.Where(y => GetItemUpgradeSuccessChanceAsync(totalValue, y).Result > 0).Select(async x => new { Item = x.ToDto(), Chance = await GetItemUpgradeSuccessChanceAsync(totalValue, x), Multiplier = Math.Round((decimal)x.ItemValue! / totalValue, 2) }) };
         }
 
         /// <inheritdoc/>
         public async Task<ActionStatus> GetUserAsync(string username)
         {
-            User? user = await context.Users.FirstOrDefaultAsync(x => x.Username == username);
+            User? user = await userRepository.GetByUsernameAsync(username);
 
-            if (user == null)
-            {
-                return new ActionStatus { Status = "ERR", Message = "A felhasználó nem található." };
-            }
+            if (user == null) return new ActionStatus { Status = "ERR", Message = "A felhasználó nem található." };
 
             return new ActionStatus { Status = "OK", Message = user };
         }
@@ -456,14 +435,14 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> GetUsersAsync()
         {
-            var users = await context.Users.ToListAsync();
+            var users = await userRepository.GetAllAsync();
 
             var userDtos = new List<UserResponse>();
 
             foreach (var u in users)
             {
-                var items = await context.Userinventories.Where(x => x.UserId == u.UserId).Select(x => x.Item.ToDto()).ToListAsync();
-                userDtos.Add(u.ToDto(items));
+                var items = await userInventoryRepository.GetUserInventoryAsync(u.UserId);
+                userDtos.Add(u.ToDto(items.Select(x => x.Item.ToDto()).ToList()));
             }
 
             return new ActionStatus { Status = "OK", Message = userDtos };
@@ -472,12 +451,14 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> JoinGiveawayAsync(User user, int id)
         {
-            var giveaway = await context.Giveaways.Where(x => x.GiveawayDate > DateTime.Now && x.GiveawayId == id).Include(x => x.Users).FirstOrDefaultAsync();
+            var giveaway = await giveawayRepository.GetByIdAsync(id);
+
             if (giveaway == null) return new ActionStatus { Status = "ERR", Message = "A megadott nyereményjáték nem található." };
+            if (giveaway.GiveawayDate < DateTime.Now) return new ActionStatus { Status = "ERR", Message = "A nyereményjáték már lezárult." };
             if (giveaway.Users.Contains(user)) return new ActionStatus { Status = "ERR", Message = "Már csatlakoztál a nyereményjátékhoz." };
 
             giveaway.Users.Add(user);
-            await context.SaveChangesAsync();
+            await giveawayRepository.UpdateAsync(giveaway);
 
             return new ActionStatus { Status = "OK", Message = "Sikeresen csatlakoztál a nyereményjátékhoz." };
         }
@@ -565,7 +546,7 @@ namespace csgo.Services
                         };
 
                         storedUser.WebauthnPublicKey = JsonSerializer.Serialize(storedCredential);
-                        await context.SaveChangesAsync();
+                        await userRepository.UpdateAsync(storedUser);
 
                         return CheckPassword(login.Password, storedUser);
                     }
@@ -619,9 +600,9 @@ namespace csgo.Services
 
         private async Task<bool> IsUserHandleOwnerOfCredentialId(IsUserHandleOwnerOfCredentialIdParams arg, CancellationToken cancellationToken)
         {
-            var user = await context.Users.FirstAsync(x => x.UserId == Convert.ToInt32(Encoding.UTF8.GetString(arg.UserHandle)), cancellationToken: cancellationToken);
+            var user = await userRepository.GetByIdAsync(Convert.ToInt32(Encoding.UTF8.GetString(arg.UserHandle)));
 
-            if (user.WebauthnPublicKey == null) return false;
+            if (user == null || user.WebauthnPublicKey == null) return false;
 
             var credential = JsonSerializer.Deserialize<StoredCredential>(user.WebauthnPublicKey);
 
@@ -631,12 +612,12 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> OpenCaseAsync(User user, int caseId)
         {
-            var @case = await context.Items.FirstOrDefaultAsync(x => x.ItemType == ItemType.Case && x.ItemId == caseId);
+            var @case = await itemRepository.GetCaseByIdAsync(caseId);
             if (@case == null) return new ActionStatus { Status = "ERR", Message = "A megadott láda nem található." };
 
             if ((decimal)user.Balance < @case.ItemValue) return new ActionStatus { Status = "ERR", Message = "Nincs elég egyenleged a láda megnyitásához." };
 
-            var ctxCaseItems = await context.CaseItems.Where(x => x.Case == @case).Include(y => y.Item).ToArrayAsync();
+            var ctxCaseItems = await caseItemRepository.GetCaseItemsAsync(caseId);
 
             var weights = new Dictionary<Item, double>();
             foreach (var item in ctxCaseItems)
@@ -653,15 +634,11 @@ namespace csgo.Services
             var caseItems = new WeightedList<Item>(itemList);
             var resultItem = caseItems.Next();
 
-            await context.Userinventories.AddAsync(new Userinventory
-            {
-                ItemId = resultItem.ItemId,
-                UserId = user.UserId
-            });
+            await userInventoryRepository.AddAsync(new Userinventory { ItemId = resultItem.ItemId, UserId = user.UserId });
 
             user.Balance -= Convert.ToDouble(@case.ItemValue);
 
-            await context.SaveChangesAsync();
+            await userRepository.UpdateAsync(user);
 
             return new ActionStatus { Status = "OK", Message = resultItem.ToDto() };
         }
@@ -675,20 +652,19 @@ namespace csgo.Services
                 Username = register.Username
             };
 
-            if (await context.Users.AnyAsync(u => u.Username == register.Username))
+            if (await userRepository.UsernameExistsAsync(register.Username))
             {
                 return new ActionStatus { Status = "ERR", Message = "A megadott felhasználónév már foglalt." };
             }
 
-            if (await context.Users.AnyAsync(u => u.Email == register.Email))
+            if (await userRepository.EmailExistsAsync(register.Email))
             {
                 return new ActionStatus { Status = "ERR", Message = "Az megadott e-mail már használatban van." };
             }
 
             string hashedPassword = BCrypt.Net.BCrypt.HashPassword(register.Password);
             newUser.PasswordHash = hashedPassword;
-            await context.Users.AddAsync(newUser);
-            await context.SaveChangesAsync();
+            await userRepository.AddAsync(newUser);
 
             return new ActionStatus { Status = "OK", Message = "Sikeres regisztráció!" };
         }
@@ -696,12 +672,13 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> SellItemAsync(User user, int inventoryId)
         {
-            var inventoryItem = await context.Userinventories.Include(x => x.Item).FirstOrDefaultAsync(x => x.InventoryId == inventoryId && x.UserId == user.UserId);
-            if (inventoryItem == null) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található a leltárban." };
+            var inventoryItems = await userInventoryRepository.GetUserInventoryAsync(user.UserId);
+            if (!inventoryItems.Any(x => x.InventoryId == inventoryId)) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található a leltárban." };
+
+            var inventoryItem = inventoryItems.First(x => x.InventoryId == inventoryId);
 
             user.Balance += Convert.ToDouble(inventoryItem.Item.ItemValue);
-            context.Userinventories.Remove(inventoryItem);
-            await context.SaveChangesAsync();
+            await userInventoryRepository.DeleteAsync(inventoryItem);
 
             return new ActionStatus { Status = "OK", Message = "A tárgy sikeresen eladva." };
         }
@@ -709,29 +686,29 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> UpdateCaseAsync(int caseId, CaseRecord details)
         {
-            var @case = await context.Items.FirstOrDefaultAsync(x => x.ItemId == caseId && x.ItemType == ItemType.Case);
+            var @case = await itemRepository.GetCaseByIdAsync(caseId);
             if (@case == null) return new ActionStatus { Status = "ERR", Message = "A megadott láda nem található." };
 
             @case.ItemName = details.Name;
             @case.ItemValue = details.Value;
             if (details.AssetUrl != null) @case.ItemAssetUrl = details.AssetUrl;
 
-            await context.SaveChangesAsync();
+            await itemRepository.UpdateAsync(@case);
 
-            var caseItems = await context.CaseItems.Where(x => x.Case == @case).Select(x => x.Item.ToDto()).ToListAsync();
+            var caseItems = await caseItemRepository.GetCaseItemsAsync(caseId);
 
-            return new ActionStatus { Status = "OK", Message = @case.ToCaseDto(caseItems) };
+            return new ActionStatus { Status = "OK", Message = @case.ToCaseDto(caseItems.Select(x => x.Item.ToDto()).ToList()) };
         }
 
         /// <inheritdoc/>
         public async Task<ActionStatus> UpdateGiveawayAsync(int giveawayId, GiveawayRecord details)
         {
-            var giveaway = await context.Giveaways.FindAsync(giveawayId);
+            var giveaway = await giveawayRepository.GetByIdAsync(giveawayId);
             if (giveaway == null) return new ActionStatus { Status = "ERR", Message = "A megadott nyereményjáték nem található." };
             if (giveaway.GiveawayDate < DateTime.Now) return new ActionStatus { Status = "ERR", Message = "Lefutott nyereményjátékot nem lehet módosítani." };
             if (details.Date < DateTime.Now) return new ActionStatus { Status = "ERR", Message = "A nyereményjáték dátuma nem lehet a múltban." };
 
-            var item = await context.Items.FindAsync(details.ItemId);
+            var item = await itemRepository.GetItemByIdAsync(details.ItemId);
             if (item == null) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található." };
 
             giveaway.GiveawayDate = details.Date.ToLocalTime();
@@ -739,7 +716,7 @@ namespace csgo.Services
             giveaway.GiveawayName = details.Name;
             giveaway.ItemId = item.ItemId;
 
-            await context.SaveChangesAsync();
+            await giveawayRepository.UpdateAsync(giveaway);
 
             return new ActionStatus
             {
@@ -758,7 +735,7 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> UpdateItemAsync(int itemId, ItemRecord details)
         {
-            var item = await context.Items.FirstOrDefaultAsync(x => x.ItemId == itemId && x.ItemType == ItemType.Item);
+            var item = await itemRepository.GetItemByIdAsync(itemId);
             if (item == null) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található." };
 
             item.ItemName = details.Name;
@@ -768,7 +745,7 @@ namespace csgo.Services
             item.ItemValue = details.Value;
             if (details.AssetUrl != null) item.ItemAssetUrl = details.AssetUrl;
 
-            await context.SaveChangesAsync();
+            await itemRepository.UpdateAsync(item);
 
             return new ActionStatus { Status = "OK", Message = item.ToDto() };
         }
@@ -776,51 +753,50 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> UpdateUserAsync(int userId, UserEditRecord details)
         {
-            var target = await context.Users.FirstOrDefaultAsync(x => x.UserId == userId);
+            var target = await userRepository.GetByIdAsync(userId);
             if (target == null) return new ActionStatus { Status = "ERR", Message = "A megadott felhasználó nem található." };
 
-            if (await context.Users.AnyAsync(x => x.Username == details.Username && x.UserId != userId)) return new ActionStatus { Status = "ERR", Message = "A megadott felhasználónév már foglalt." };
-            if (await context.Users.AnyAsync(x => x.Email == details.Email && x.UserId != userId)) return new ActionStatus { Status = "ERR", Message = "Az megadott e-mail már használatban van." };
+            if (await userRepository.UsernameExistsAsync(details.Username, userId)) return new ActionStatus { Status = "ERR", Message = "A megadott felhasználónév már foglalt." };
+            if (await userRepository.EmailExistsAsync(details.Email, userId)) return new ActionStatus { Status = "ERR", Message = "Az megadott e-mail már használatban van." };
 
             target.Username = details.Username;
             target.Email = details.Email;
             target.Balance = details.Balance;
 
-            await context.SaveChangesAsync();
+            await userRepository.UpdateAsync(target);
 
-            var items = await context.Userinventories.Where(x => x.UserId == target.UserId).Select(x => x.Item.ToDto()).ToListAsync();
-            return new ActionStatus { Status = "OK", Message = target.ToDto(items) };
+            var items = await userInventoryRepository.GetUserInventoryAsync(userId);
+            return new ActionStatus { Status = "OK", Message = target.ToDto(items.Select(x => x.Item.ToDto()).ToList()) };
         }
 
         /// <inheritdoc/>
         public async Task<ActionStatus> UpgradeItemAsync(User user, ItemUpgradeRequest request)
         {
+            var userInventory = await userInventoryRepository.GetUserInventoryAsync(user.UserId);
+
             foreach (var item in request.Items)
             {
-                if (!await context.Userinventories.AnyAsync(x => x.InventoryId == item && x.UserId == user.UserId)) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található a leltárban." };
+                if (!userInventory.Any(x => x.InventoryId == item)) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található a leltárban." };
             }
 
-            List<InventoryItemResponse> itemData = request.Items.Select(x => context.Userinventories.Include(y => y.Item).First(y => y.InventoryId == x).Item.ToInventoryItemDto(x)).ToList();
+            List<InventoryItemResponse> itemData = request.Items.Select(x => userInventory.First(y => y.InventoryId == x).Item.ToInventoryItemDto(x)).ToList();
 
-            var nextItem = await context.Items.FirstOrDefaultAsync(x => x.ItemId == request.Target && x.ItemType == ItemType.Item);
+            var nextItem = await itemRepository.GetItemByIdAsync(request.Target);
             if (nextItem == null) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található." };
 
             var totalValue = itemData.Sum(x => x.ItemValue);
 
-            var chance = GetItemUpgradeSuccessChance(totalValue, nextItem);
+            var chance = await GetItemUpgradeSuccessChanceAsync(totalValue, nextItem);
 
             if (GetRandomDouble() < chance)
             {
                 foreach (var item in itemData)
                 {
-                    context.Userinventories.Remove(await context.Userinventories.FirstAsync(x => x.InventoryId == item.InventoryId));
+                    var inventoryItem = userInventory.First(x => x.InventoryId == item.InventoryId);
+                    await userInventoryRepository.DeleteAsync(inventoryItem);
                 }
-                await context.Userinventories.AddAsync(new Userinventory
-                {
-                    ItemId = nextItem.ItemId,
-                    UserId = user.UserId
-                });
-                await context.SaveChangesAsync();
+
+                await userInventoryRepository.AddAsync(new Userinventory { ItemId = nextItem.ItemId, UserId = user.UserId });
 
                 return new ActionStatus
                 {
@@ -836,9 +812,9 @@ namespace csgo.Services
             {
                 foreach (var item in itemData)
                 {
-                    context.Userinventories.Remove(await context.Userinventories.FirstAsync(x => x.InventoryId == item.InventoryId));
+                    var inventoryItem = userInventory.First(x => x.InventoryId == item.InventoryId);
+                    await userInventoryRepository.DeleteAsync(inventoryItem);
                 }
-                await context.SaveChangesAsync();
 
                 return new ActionStatus
                 {
@@ -955,7 +931,7 @@ namespace csgo.Services
                             user.WebauthnPublicKey = JsonSerializer.Serialize(storedCredential);
                             user.WebauthnEnabled = true;
 
-                            await context.SaveChangesAsync();
+                            await userRepository.UpdateAsync(user);
 
                             return new ActionStatus { Status = "OK", Message = "A WebAuthn sikeresen engedélyezve lett." };
                         }
@@ -1005,7 +981,7 @@ namespace csgo.Services
                         user.WebauthnCredentialId = null;
                         user.WebauthnPublicKey = null;
 
-                        await context.SaveChangesAsync();
+                        await userRepository.UpdateAsync(user);
 
                         return new ActionStatus { Status = "OK", Message = "A WebAuthn sikeresen kikapcsolva lett." };
                 }
@@ -1019,20 +995,22 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> WithdrawItemsAsync(User user, ItemWithdrawRequest request)
         {
+            var userItems = await userInventoryRepository.GetUserInventoryAsync(user.UserId);
+
             foreach (var item in request.Items)
             {
-                var inventoryItem = await context.Userinventories.Include(x => x.Item).FirstOrDefaultAsync(x => x.InventoryId == item && x.UserId == user.UserId);
-                if (inventoryItem == null) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található a leltárban." };
+                if (!userItems.Any(x => x.InventoryId == item)) return new ActionStatus { Status = "ERR", Message = "A megadott tárgy nem található a leltárban." };
             }
 
             // Valójában csak kitöröljük a tárgyakat a leltárból, mert nincs külső rendszerhez (Steamhez) integrációnk.
             foreach (var item in request.Items)
             {
-                var inventoryItem = await context.Userinventories.Include(x => x.Item).FirstAsync(x => x.InventoryId == item && x.UserId == user.UserId);
-                context.Userinventories.Remove(inventoryItem);
-            }
+                var inventoryItem = await userInventoryRepository.GetById(item);
 
-            await context.SaveChangesAsync();
+                if(inventoryItem != null) {
+                    await userInventoryRepository.DeleteAsync(inventoryItem);
+                }
+            }
 
             return new ActionStatus { Status = "OK", Message = "A tárgyak sikeresen ki lettek kérve." };
         }
@@ -1040,14 +1018,14 @@ namespace csgo.Services
         /// <inheritdoc/>
         public async Task<ActionStatus> GetItemsAsync()
         {
-            var items = await context.Items.Where(x => x.ItemType == ItemType.Item).Select(x => x.ToDto()).ToListAsync();
+            var items = await itemRepository.GetAllItemsAsync();
 
             return new ActionStatus { Status = "OK", Message = items };
         }
 
-        private double GetItemUpgradeSuccessChance(decimal currentValue, Item nextItem)
+        private async Task<double> GetItemUpgradeSuccessChanceAsync(decimal currentValue, Item nextItem)
         {
-            var next = context.Items.Find(nextItem.ItemId);
+            var next = await itemRepository.GetItemByIdAsync(nextItem.ItemId);
 
             // Alap esély
             double baseChance = 0.8;
@@ -1100,7 +1078,7 @@ namespace csgo.Services
 
         private async Task<bool> IsCredentialIdUniqueToUser(IsCredentialIdUniqueToUserParams credentialIdUserParams, CancellationToken cancellationToken)
         {
-            return !await context.Users.AnyAsync(x => x.WebauthnCredentialId == Convert.ToBase64String(credentialIdUserParams.CredentialId), cancellationToken: cancellationToken);
+            return !await userRepository.CredentialIdExistsAsync(Convert.ToBase64String(credentialIdUserParams.CredentialId));
         }
     }
 }
