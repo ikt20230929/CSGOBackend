@@ -12,8 +12,6 @@ namespace csgo.Tests
             var items = new List<Item>
             {
                 new() { ItemId = 1, ItemName = "Item 1" },
-                new() { ItemId = 2, ItemName = "Item 2" },
-                new() { ItemId = 3, ItemName = "Item 3" },
                 new() { ItemId = 5, ItemName = "Item 2" }
             };
 
@@ -28,13 +26,6 @@ namespace csgo.Tests
                 new()
                 {
                     CaseId = 6,
-                    ItemId = 1,
-                    Case = cases.First(c => c.ItemId == 6),
-                    Item = items.First(i => i.ItemId == 1)
-                },
-                new()
-                {
-                    CaseId = 6,
                     ItemId = 5,
                     Case = cases.First(c => c.ItemId == 6),
                     Item = items.First(i => i.ItemId == 5)
@@ -42,9 +33,9 @@ namespace csgo.Tests
                 new()
                 {
                     CaseId = 2,
-                    ItemId = 5,
+                    ItemId = 1,
                     Case = cases.First(c => c.ItemId == 2),
-                    Item = items.First(i => i.ItemId == 5)
+                    Item = items.First(i => i.ItemId == 1)
                 }
             };
 
@@ -164,7 +155,7 @@ namespace csgo.Tests
                 .ReturnsAsync(
                     () =>
                         giveaways
-                            .Where(g => g.GiveawayDate >= DateTime.Now && g.WinnerUserId == null)
+                            .Where(g => g.GiveawayDate > GetMockDateTimeProvider().Object.Now && g.WinnerUserId == null)
                             .ToList()
                 );
 
@@ -173,7 +164,7 @@ namespace csgo.Tests
                 .ReturnsAsync(
                     () =>
                         giveaways
-                            .Where(g => g.GiveawayDate < DateTime.Now && g.WinnerUserId != null)
+                            .Where(g => g.GiveawayDate <= GetMockDateTimeProvider().Object.Now && g.WinnerUserId != null)
                             .ToList()
                 );
 
@@ -189,28 +180,40 @@ namespace csgo.Tests
                     ItemId = 1,
                     ItemName = "Item 1",
                     ItemType = ItemType.Item,
-                    ItemValue = 10.0m
+                    ItemValue = 10.0m,
+                    ItemRarity = ItemRarity.INDUSTRIAL_GRADE
                 },
                 new()
                 {
                     ItemId = 5,
                     ItemName = "Item 2",
                     ItemType = ItemType.Item,
-                    ItemValue = 15.0m
+                    ItemValue = 15.0m,
+                    ItemRarity = ItemRarity.MIL_SPEC
+                },
+                new()
+                {
+                    ItemId = 9,
+                    ItemName = "Item 3",
+                    ItemType = ItemType.Item,
+                    ItemValue = 25.0m,
+                    ItemRarity = ItemRarity.COVERT
                 },
                 new()
                 {
                     ItemId = 2,
                     ItemName = "Case 1",
                     ItemType = ItemType.Case,
-                    ItemValue = 5.0m
+                    ItemValue = 5.0m,
+                    ItemRarity = ItemRarity.EXTRAORDINARY
                 },
                 new()
                 {
                     ItemId = 6,
                     ItemName = "Case 2",
                     ItemType = ItemType.Case,
-                    ItemValue = 8.0m
+                    ItemValue = 8.0m,
+                    ItemRarity = ItemRarity.EXTRAORDINARY
                 }
             };
 
@@ -308,13 +311,34 @@ namespace csgo.Tests
                 new()
                 {
                     ItemId = 2,
-                    ItemAssetUrl = "https://example.com/item2.jpg",
-                    ItemName = "Case 1",
+                    ItemAssetUrl = "https://example.com/case2.jpg",
+                    ItemName = "Case 2",
                     ItemType = ItemType.Case,
+                    ItemValue = 5.0m,
+                    ItemDescription = "Case 2 description",
+                    ItemRarity = ItemRarity.MIL_SPEC,
+                    ItemSkinName = "Case 2 skin",
+                },
+                new()
+                {
+                    ItemId = 5,
+                    ItemAssetUrl = "https://example.com/item2.jpg",
+                    ItemName = "Item 2",
+                    ItemType = ItemType.Item,
                     ItemValue = 20.0m,
-                    ItemDescription = "Case 1 description",
+                    ItemDescription = "Item 2 description",
+                    ItemRarity = ItemRarity.MIL_SPEC,
+                    ItemSkinName = "Item 2 skin",
+                },
+                new() {
+                    ItemId = 9,
+                    ItemAssetUrl = "https://example.com/item3.jpg",
+                    ItemName = "Item 3",
+                    ItemType = ItemType.Item,
+                    ItemValue = 25.0m,
+                    ItemDescription = "Item 3 description",
                     ItemRarity = ItemRarity.EXTRAORDINARY,
-                    ItemSkinName = "Case 1 skin",
+                    ItemSkinName = "Item 3 skin",
                 }
             };
 
@@ -332,8 +356,8 @@ namespace csgo.Tests
                 {
                     InventoryId = 2,
                     UserId = 1,
-                    ItemId = 2,
-                    Item = items.First(item => item.ItemId == 2),
+                    ItemId = 1,
+                    Item = items.First(item => item.ItemId == 1),
                     User = users.First(user => user.UserId == 1)
                 },
                 new()
@@ -342,6 +366,22 @@ namespace csgo.Tests
                     UserId = 1,
                     ItemId = 2,
                     Item = items.First(item => item.ItemId == 2),
+                    User = users.First(user => user.UserId == 1)
+                },
+                new()
+                {
+                    InventoryId = 4,
+                    UserId = 1,
+                    ItemId = 2,
+                    Item = items.First(item => item.ItemId == 2),
+                    User = users.First(user => user.UserId == 1)
+                },
+                new()
+                {
+                    InventoryId = 5,
+                    UserId = 1,
+                    ItemId = 9,
+                    Item = items.First(item => item.ItemId == 9),
                     User = users.First(user => user.UserId == 1)
                 }
             };
@@ -517,6 +557,23 @@ namespace csgo.Tests
         {
             var mockRepo = new Mock<IDateTimeProvider>();
             mockRepo.Setup(r => r.Now).Returns(new DateTime(2024, 3, 19));
+            return mockRepo;
+        }
+
+        public static Mock<IPasswordAuthenticationProvider> GetMockPasswordAuthenticationProvider()
+        {
+            var mockRepo = new Mock<IPasswordAuthenticationProvider>();
+            mockRepo
+                .Setup(r => r.VerifyPassword(It.IsAny<string>(), It.IsAny<string>()))
+                .Returns(
+                    (string password, string hash) =>
+                    {
+                        return password == "password" && hash == "hash";
+                    }
+                );
+
+            mockRepo.Setup(r => r.HashPassword(It.IsAny<string>())).Returns("hash");
+
             return mockRepo;
         }
     }

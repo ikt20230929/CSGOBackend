@@ -165,7 +165,28 @@ namespace csgo
         }
 
         /// <summary>
-        /// Egy tárgy fejlesztésének eredménye (API-kérés értesítése)
+        /// Továbbfejlesztési lehetőségek tárolására szolgáló osztály
+        /// </summary>
+        public class UpgradeItemInfo
+        {
+            /// <summary>
+            /// Egy tárgy
+            /// </summary>
+            public ItemResponse? Item { get; set; }
+
+            /// <summary>
+            /// A sikeres fejlesztés esélye
+            /// </summary>
+            public double Chance { get; set; }
+
+            /// <summary>
+            /// A szorzó mennyisége
+            /// </summary>
+            public decimal Multiplier { get; set; }
+        }
+
+        /// <summary>
+        /// Egy tárgy fejlesztésének eredménye (API-kérés válasz)
         /// </summary>
         public record ItemUpgradeResponse {
             /// <summary>

@@ -75,6 +75,7 @@ namespace csgo
             builder.Services.AddScoped<ICsgoBackendService, CSGOBackendService>();
             builder.Services.AddScoped<ITotpProvider, TotpProvider>();
             builder.Services.AddScoped<IDateTimeProvider, DateTimeProvider>();
+            builder.Services.AddScoped<IPasswordAuthenticationProvider, PasswordAuthenticationProvider>();
             builder.Services.AddDbContext<CsgoContext>();
             builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
             {

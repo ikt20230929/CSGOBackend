@@ -22,6 +22,7 @@ namespace csgo.Services
     /// <param name="userInventoryRepository">A felhasználó leltárát kezelő repository</param>
     /// <param name="userRepository">A felhasználókat kezelő repository</param>
     /// <param name="dateTimeProvider">Dátum-idő szolgáltatás</param>
+    /// <param name="passwordAuthenticationProvider">Jelszó ellenőrzés és kódolásért felelős szolgáltatás</param>
     /// <param name="totpProvider">A TOTP szolgáltatás</param>
     /// <param name="fido2">A Fido2 szolgáltatás</param>
     public class CSGOBackendService(
@@ -31,6 +32,7 @@ namespace csgo.Services
     IUserInventoryRepository userInventoryRepository,
     IUserRepository userRepository,
     IDateTimeProvider dateTimeProvider,
+    IPasswordAuthenticationProvider passwordAuthenticationProvider,
     ITotpProvider totpProvider,
     IFido2 fido2) : ICsgoBackendService
     {
@@ -305,7 +307,7 @@ namespace csgo.Services
         {
             if (!user.TotpEnabled) return new ActionStatus { Status = "ERR", Message = "A kétlépcsős azonosítás nincs engedélyezve." };
 
-            if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash)) return new ActionStatus { Status = "ERR", Message = "Érvénytelen jelszó." };
+            if (!passwordAuthenticationProvider.VerifyPassword(request.Password, user.PasswordHash)) return new ActionStatus { Status = "ERR", Message = "Érvénytelen jelszó." };
 
             bool verify = totpProvider.VerifyTotp(Base32Encoding.ToBytes(user.TotpSecret), request.Code);
 
@@ -363,7 +365,7 @@ namespace csgo.Services
                 GiveawayItem = giveaway.Item?.ItemName ?? "Név lekérése sikertelen volt.",
                 GiveawayItemAssetUrl = giveaway.Item?.ItemAssetUrl ?? "error.png",
                 GiveawayItemSkinName = giveaway.Item?.ItemSkinName ?? "Skin név lekérése sikertelen volt.",
-                GiveawayJoined = giveaway.Users.Contains(user)
+                GiveawayJoined = giveaway.Users.Any(x => x.UserId == user.UserId)
             }).ToList();
 
             return new ActionStatus { Status = "OK", Message = mapped };
@@ -421,7 +423,19 @@ namespace csgo.Services
 
             if (upgradeItems.Count == 0) return new ActionStatus { Status = "ERR", Message = "A tárgy nem fejleszthető tovább." };
 
-            return new ActionStatus { Status = "OK", Message = upgradeItems.Where(y => GetItemUpgradeSuccessChance(totalValue, y) > 0).Select(x => new { Item = x.ToDto(), Chance = GetItemUpgradeSuccessChance(totalValue, x), Multiplier = Math.Round((decimal)x.ItemValue! / totalValue, 2) }) };
+            return new ActionStatus
+            {
+                Status = "OK",
+                Message = upgradeItems
+                    .Where(y => GetItemUpgradeSuccessChance(totalValue, y) > 0)
+                    .Select(x => new UpgradeItemInfo
+                    {
+                        Item = x.ToDto(),
+                        Chance = GetItemUpgradeSuccessChance(totalValue, x),
+                        Multiplier = Math.Round((decimal)x.ItemValue! / totalValue, 2)
+                    })
+                    .ToList()
+            };
         }
 
         /// <inheritdoc/>
@@ -457,7 +471,7 @@ namespace csgo.Services
 
             if (giveaway == null) return new ActionStatus { Status = "ERR", Message = "A megadott nyereményjáték nem található." };
             if (giveaway.GiveawayDate < dateTimeProvider.Now) return new ActionStatus { Status = "ERR", Message = "A nyereményjáték már lezárult." };
-            if (giveaway.Users.Contains(user)) return new ActionStatus { Status = "ERR", Message = "Már csatlakoztál a nyereményjátékhoz." };
+            if (giveaway.Users.Any(x => x.UserId == user.UserId)) return new ActionStatus { Status = "ERR", Message = "Már csatlakoztál a nyereményjátékhoz." };
 
             giveaway.Users.Add(user);
             await giveawayRepository.UpdateAsync(giveaway);
@@ -561,7 +575,7 @@ namespace csgo.Services
 
         private ActionStatus CheckPassword(string password, User storedUser)
         {
-            if (!BCrypt.Net.BCrypt.Verify(password, storedUser.PasswordHash))
+            if (!passwordAuthenticationProvider.VerifyPassword(password, storedUser.PasswordHash))
             {
                 return new ActionStatus { Status = "ERR", Message = "Helytelen felhasználónév vagy jelszó." };
             }
@@ -664,7 +678,7 @@ namespace csgo.Services
                 return new ActionStatus { Status = "ERR", Message = "Az megadott e-mail már használatban van." };
             }
 
-            string hashedPassword = BCrypt.Net.BCrypt.HashPassword(register.Password);
+            string hashedPassword = passwordAuthenticationProvider.HashPassword(register.Password);
             newUser.PasswordHash = hashedPassword;
             await userRepository.AddAsync(newUser);
 
